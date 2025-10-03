@@ -1,0 +1,29 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "DMD - Demystifying Nix"
+  author: "Harlan Nelson"
+  date: today
+  chapters:
+    - index.qmd
+    - intro.qmd
+    - basics.qmd
+    - packages.qmd
+    - shells.qmd
+    - references.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-copy: true
+    code-fold: false
+  pdf:
+    documentclass: book
+    keep-tex: true

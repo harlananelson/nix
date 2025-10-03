@@ -1,0 +1,120 @@
+# Package Management
+
+## Installing Packages
+
+Nix provides several ways to install packages, each suited for different use cases.
+
+### Imperative Installation
+
+The traditional way using `nix-env`:
+
+```bash
+# Install a specific package
+nix-env -iA nixpkgs.git
+
+# Install multiple packages
+nix-env -iA nixpkgs.vim nixpkgs.tmux nixpkgs.htop
+```
+
+### Declarative Installation
+
+Using a configuration file (recommended for reproducibility):
+
+```nix
+# ~/.config/nixpkgs/config.nix
+{
+  packageOverrides = pkgs: with pkgs; {
+    myPackages = pkgs.buildEnv {
+      name = "my-packages";
+      paths = [
+        git
+        vim
+        tmux
+        htop
+        ripgrep
+        fd
+        bat
+      ];
+    };
+  };
+}
+```
+
+Then install with:
+
+```bash
+nix-env -iA nixpkgs.myPackages
+```
+
+## Creating Custom Packages
+
+You can create your own Nix packages using derivations:
+
+```nix
+# hello.nix
+{ stdenv, fetchurl }:
+
+stdenv.mkDerivation rec {
+  pname = "hello";
+  version = "2.10";
+
+  src = fetchurl {
+    url = "mirror://gnu/hello/${pname}-${version}.tar.gz";
+    sha256 = "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i";
+  };
+
+  meta = with stdenv.lib; {
+    description = "A program that produces a familiar, friendly greeting";
+    homepage = "https://www.gnu.org/software/hello/";
+    license = licenses.gpl3Plus;
+  };
+}
+```
+
+Build it with:
+
+```bash
+nix-build hello.nix
+```
+
+## Package Overlays
+
+Overlays allow you to customize nixpkgs:
+
+```nix
+# ~/.config/nixpkgs/overlays.nix
+self: super: {
+  myCustomPackage = super.hello.overrideAttrs (oldAttrs: {
+    # Customize the package here
+  });
+}
+```
+
+## Managing Multiple Versions
+
+Nix excels at running multiple versions of the same package:
+
+```bash
+# Install specific version
+nix-env -iA nixpkgs.python39
+
+# Install another version alongside
+nix-env -iA nixpkgs.python310
+
+# Both can coexist!
+```
+
+## Profiles
+
+Nix uses profiles to manage different sets of packages:
+
+```bash
+# List profiles
+ls -l ~/.nix-profile/
+
+# Create a new profile
+nix-env -p /nix/var/nix/profiles/per-user/$USER/myprofile -iA nixpkgs.hello
+
+# Switch profiles
+nix-env --switch-profile /nix/var/nix/profiles/per-user/$USER/myprofile
+```

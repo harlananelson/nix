@@ -1,0 +1,22 @@
+# Welcome {.unnumbered}
+
+This is a Quarto book on **Nix** - a powerful package manager and build system for reproducible development environments.
+
+## About This Book
+
+This book, "DMD - Demystifying Nix," is designed to help you understand and effectively use Nix in your development workflow. Whether you're new to Nix or looking to deepen your knowledge, this book covers essential topics from basic concepts to practical applications.
+
+## What You'll Learn
+
+- **Fundamentals of Nix**: Understanding the Nix package manager and its philosophy
+- **Package Management**: How to install, manage, and create Nix packages
+- **Development Shells**: Creating reproducible development environments with `nix-shell`
+- **Practical Applications**: Real-world examples and use cases
+
+## Getting Started
+
+Navigate through the chapters using the sidebar or the links in each chapter to explore different aspects of Nix.
+
+## About the Author
+
+This book documents my adventures with Nix and shares insights gained from practical experience with this powerful tool.

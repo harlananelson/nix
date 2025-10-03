@@ -1,0 +1,90 @@
+# Nix Basics
+
+## Understanding the Nix Store
+
+The Nix store (typically located at `/nix/store`) is where all packages are stored. Each package has a unique path based on its inputs, ensuring reproducibility.
+
+```bash
+# Example Nix store path
+/nix/store/abcd1234...-package-name-1.0
+```
+
+## Nix Expressions
+
+Nix uses a functional language to describe packages and configurations. Here's a simple example:
+
+```nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  buildInputs = [
+    pkgs.hello
+    pkgs.cowsay
+  ];
+}
+```
+
+## Basic Commands
+
+### Installing Packages
+
+```bash
+# Install a package
+nix-env -iA nixpkgs.hello
+
+# List installed packages
+nix-env -q
+
+# Uninstall a package
+nix-env -e hello
+```
+
+### Searching for Packages
+
+```bash
+# Search for a package
+nix-env -qaP | grep python
+
+# Or use nix search (Nix 2.4+)
+nix search nixpkgs python
+```
+
+### Updating Packages
+
+```bash
+# Update channel
+nix-channel --update
+
+# Upgrade all packages
+nix-env -u
+```
+
+## Channels
+
+Channels are sources of Nix packages. The main channel is `nixpkgs`.
+
+```bash
+# List channels
+nix-channel --list
+
+# Add a channel
+nix-channel --add https://nixos.org/channels/nixpkgs-unstable nixpkgs
+
+# Update channels
+nix-channel --update
+```
+
+## Garbage Collection
+
+Nix keeps old versions around until you tell it to clean up:
+
+```bash
+# Delete old generations
+nix-collect-garbage
+
+# Delete old generations and optimize
+nix-collect-garbage -d
+
+# Delete generations older than 30 days
+nix-collect-garbage --delete-older-than 30d
+```

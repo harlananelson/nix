@@ -1,0 +1,70 @@
+# References {.unnumbered}
+
+## Official Resources
+
+### Documentation
+
+- [Nix Manual](https://nixos.org/manual/nix/stable/) - Official Nix documentation
+- [Nixpkgs Manual](https://nixos.org/manual/nixpkgs/stable/) - Guide to the Nix packages collection
+- [NixOS Manual](https://nixos.org/manual/nixos/stable/) - NixOS operating system documentation
+
+### Websites
+
+- [nixos.org](https://nixos.org) - Official Nix website
+- [NixOS Wiki](https://nixos.wiki/) - Community-maintained wiki
+- [Nix Package Search](https://search.nixos.org/) - Search for packages and options
+
+## Community Resources
+
+### Forums and Chat
+
+- [NixOS Discourse](https://discourse.nixos.org/) - Official community forum
+- [NixOS Matrix](https://matrix.to/#/#community:nixos.org) - Chat rooms
+- [NixOS Reddit](https://reddit.com/r/nixos) - Community discussions
+
+### Learning Resources
+
+- [Nix Pills](https://nixos.org/guides/nix-pills/) - In-depth tutorial series
+- [nix.dev](https://nix.dev/) - Unofficial guides and tutorials
+- [Zero to Nix](https://zero-to-nix.com/) - Practical introduction to Nix
+
+## Tools and Utilities
+
+### Development Tools
+
+- [direnv](https://direnv.net/) - Automatic environment loading
+- [nix-direnv](https://github.com/nix-community/nix-direnv) - Fast direnv integration for Nix
+- [devenv](https://devenv.sh/) - Fast, declarative development environments
+- [flox](https://flox.dev/) - Developer environment management
+
+### Build Tools
+
+- [nix-build](https://nixos.org/manual/nix/stable/command-ref/nix-build.html) - Build Nix expressions
+- [nix flakes](https://nixos.wiki/wiki/Flakes) - Experimental feature for better reproducibility
+- [cachix](https://cachix.org/) - Binary cache hosting
+
+## Books and Guides
+
+- "Nix in Action" - Practical guide to Nix (hypothetical future book)
+- [Nix from First Principles: Flake Edition](https://tonyfinn.com/blog/nix-from-first-principles-flake-edition/) - Blog series
+
+## Package Collections
+
+- [nixpkgs](https://github.com/NixOS/nixpkgs) - Main package collection
+- [nur](https://github.com/nix-community/NUR) - Nix User Repository
+- [home-manager](https://github.com/nix-community/home-manager) - Dotfiles management
+
+## Video Resources
+
+- [NixOS YouTube Channel](https://www.youtube.com/@NixOS-Foundation) - Official videos
+- Various conference talks at [NixCon](https://nixcon.org/)
+
+## Related Projects
+
+- [Guix](https://guix.gnu.org/) - Similar package manager from GNU
+- [Docker](https://www.docker.com/) - Container platform (complementary to Nix)
+- [Ansible](https://www.ansible.com/) - Configuration management (can be used with Nix)
+
+## Bibliography
+
+For academic papers and research related to Nix, see the `references.bib` file.

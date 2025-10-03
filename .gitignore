@@ -1,0 +1,11 @@
+/.quarto/
+/_book/
+/.venv/
+/venv/
+*.pyc
+__pycache__/
+.DS_Store
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata

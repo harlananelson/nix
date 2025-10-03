@@ -1,0 +1,193 @@
+# Development Shells
+
+## What are Nix Shells?
+
+`nix-shell` provides a way to create isolated, reproducible development environments. This is one of Nix's most powerful features for developers.
+
+## Basic Usage
+
+### Ad-hoc Shells
+
+Quickly get a shell with specific packages:
+
+```bash
+# Get a shell with Python
+nix-shell -p python3
+
+# Get a shell with multiple packages
+nix-shell -p python3 python3Packages.pip python3Packages.numpy
+
+# Run a command in the shell
+nix-shell -p python3 --run "python --version"
+```
+
+### Shell.nix Files
+
+For reproducible project environments, create a `shell.nix` file:
+
+```nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    python3
+    python3Packages.pip
+    python3Packages.virtualenv
+    git
+  ];
+
+  shellHook = ''
+    echo "Welcome to the Python development environment!"
+    python --version
+  '';
+}
+```
+
+Then simply run:
+
+```bash
+nix-shell
+```
+
+## Advanced Shell Configurations
+
+### With Environment Variables
+
+```nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    nodejs
+    nodePackages.npm
+  ];
+
+  shellHook = ''
+    export NODE_ENV=development
+    export PATH="$PWD/node_modules/.bin:$PATH"
+    echo "Node.js environment ready!"
+  '';
+}
+```
+
+### Language-Specific Examples
+
+#### Python Development
+
+```nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    python310
+    python310Packages.pip
+    python310Packages.pytest
+    python310Packages.black
+    python310Packages.flake8
+  ];
+
+  shellHook = ''
+    # Create virtual environment if it doesn't exist
+    if [ ! -d .venv ]; then
+      python -m venv .venv
+    fi
+    source .venv/bin/activate
+  '';
+}
+```
+
+#### Node.js Development
+
+```nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    nodejs-18_x
+    nodePackages.npm
+    nodePackages.typescript
+    nodePackages.eslint
+  ];
+}
+```
+
+#### Rust Development
+
+```nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    rustc
+    cargo
+    rustfmt
+    clippy
+  ];
+
+  RUST_BACKTRACE = 1;
+}
+```
+
+## Direnv Integration
+
+Use `direnv` with Nix for automatic environment loading:
+
+1. Install direnv:
+   ```bash
+   nix-env -iA nixpkgs.direnv
+   ```
+
+2. Create `.envrc`:
+   ```bash
+   use nix
+   ```
+
+3. Allow the directory:
+   ```bash
+   direnv allow
+   ```
+
+Now the environment loads automatically when you `cd` into the directory!
+
+## Pure vs Impure Shells
+
+### Pure Shells
+
+Isolate from system environment:
+
+```bash
+nix-shell --pure
+```
+
+### Impure Shells (Default)
+
+Inherit system environment variables:
+
+```bash
+nix-shell
+```
+
+## Docker-like Workflows
+
+Use Nix shells as lightweight, reproducible alternatives to Docker containers for development:
+
+```nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    postgresql
+    redis
+  ];
+
+  shellHook = ''
+    export PGDATA="$PWD/postgres_data"
+    export REDIS_DATA="$PWD/redis_data"
+    
+    # Initialize PostgreSQL if needed
+    if [ ! -d "$PGDATA" ]; then
+      initdb -D "$PGDATA"
+    fi
+  '';
+}
+```

@@ -1,0 +1,49 @@
+# Introduction to Nix
+
+## What is Nix?
+
+Nix is a powerful package manager for Linux and other Unix systems that makes package management reliable and reproducible. It provides atomic upgrades and rollbacks, side-by-side installation of multiple versions of a package, multi-user package management, and easy setup of build environments.
+
+## Key Features
+
+### Reproducibility
+
+One of Nix's core principles is reproducibility. When you build a package with Nix, it will produce the same result every time, regardless of what other packages are installed on your system.
+
+```bash
+# Example: Install a package with Nix
+nix-env -iA nixpkgs.hello
+```
+
+### Declarative Configuration
+
+Nix allows you to declare your system configuration in a declarative manner, making it easy to reproduce your entire system setup on another machine.
+
+### Rollbacks
+
+Made a mistake? With Nix, you can easily roll back to a previous configuration:
+
+```bash
+# Roll back to previous generation
+nix-env --rollback
+```
+
+## Why Use Nix?
+
+- **Reliability**: No more dependency conflicts
+- **Reproducibility**: Build the same way everywhere
+- **Atomic Upgrades**: All or nothing - no broken states
+- **Multiple Versions**: Run different versions side-by-side
+- **Garbage Collection**: Clean up unused packages safely
+
+## Getting Nix
+
+Visit [nixos.org](https://nixos.org) to download and install Nix on your system.
+
+```bash
+# Install Nix (single-user)
+sh <(curl -L https://nixos.org/nix/install) --no-daemon
+
+# Install Nix (multi-user - recommended)
+sh <(curl -L https://nixos.org/nix/install) --daemon
+```
