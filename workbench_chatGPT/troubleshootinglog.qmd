@@ -1,0 +1,312 @@
+---
+title: "Nix Troubleshooting Log — Headless Azure Data Environment"
+subtitle: "What we tried, what worked, what didn’t"
+author: "Harlan Nelson"
+date: "2025-10-03"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    code-tools: true
+---
+
+# 1. Scope & Baseline
+
+This log distills all prior issues we hit while building a **headless, MFA-enabled, Nix-managed** data environment that connects to **Azure SQL (ODBC)** and **Databricks** with **R + Python** support over SSH.
+
+**Host facts**
+- Headless Linux dev host, access via SSH / VS Code Remote.
+- Nix flakes, `allowUnfree = true` (for Microsoft ODBC driver).
+- Toolchains: Python (pyodbc, azure-identity), R (odbc, DBI, keyring, AzureAuth), optional Rust (Polars/Arrow).
+- Authentication: Device Code / CLI, no browser GUI.
+
+# 2. Executive Summary (Fix Matrix)
+
+| Problem | Symptom | Tried | Result | Final Fix / Status |
+|---|---|---|---|---|
+| User identity missing | Shell shows `I have no name!` | Environment hacks | ❌ | Add `shadow`; ensure passwd mapping ✅ |
+| `/tmp` perms | R kernel/install failures | Re-run installs | ❌ | `TMPDIR=$HOME/tmp` with directory created ✅ |
+| ODBC driver manager not found | `odbc` cannot locate manager/driver | Set `LD_LIBRARY_PATH`, tweak `ODBCINI` | ❌ brittle | Create **user** `odbcinst.ini` + set `ODBCSYSINI` ✅ |
+| R in VS Code not recognized | R ext complains; LSP build fails in Nix | Keep `languageserver` in flake | ❌ | Remove from flake; install via R at runtime in `shellHook` ✅ |
+| Token auth for SQL (R) | Headless auth | Browse/Interactive flows | ❌ | Use `Authentication=ActiveDirectoryDeviceCode` (R) ✅ |
+| Token auth for SQL (Py) | Need MFA headless tokens | `InteractiveBrowserCredential` | ❌ | `DefaultAzureCredential(exclude_interactive_browser_credential=True)` → CLI → Device Code fallback ✅ |
+| Keyring headless | Secrets storage | `gnome-keyring` with no DBus | ❌ | Prefer Secret Service with DBus or `pass` backend; document alternatives ✅ |
+| Databricks Connect v2 | Built local Spark accidentally | `SparkSession.builder` only | ⚠️ | Use `DatabricksSession.builder.getOrCreate()` ✅ |
+| FHS path mismatches | R/ODBC lookups fail | Ad-hoc env vars | ❌ | `buildFHSEnv` or ensure paths via `odbcinst.ini` + `ODBCSYSINI` ✅ |
+
+# 3. Timeline (Mermaid)
+
+```mermaid
+timeline
+  title Nix + Azure Headless Environment — Troubleshooting
+  section Identity & Temp
+    "I have no name!" → add `shadow` : done
+    `/tmp` perms → set `TMPDIR`    : done
+  section ODBC / SQL
+    Driver manager not found → env var attempts : failed
+    Register driver in user odbcinst.ini       : done
+    R headless auth → Device Code              : done
+    Python token packing (UTF-16LE)            : done
+  section Tooling
+    VS Code R not recognized → languageserver  : fixed via local install
+    FHS sandbox for stubborn pathing           : optional fallback
+  section Databricks
+    Connect v2 corrected (remote session)      : done
+    Plan: add ADBC benchmarks                   : next
+```
+
+# 4. Issues — Detailed Logs
+
+## 4.1 Identity: `I have no name!`
+**Symptom**  
+Shell prompt/user tools show missing username mapping after SSH into Nix shell.
+
+**Tried**  
+- Environment overrides and UID tweaks.
+
+**Verdict**  
+❌ Unreliable.
+
+**Fix**  
+✅ Include `shadow` to ensure expected NSS/identity mapping. Confirm with:
+```bash
+id -u; id -un
+```
+
+---
+
+## 4.2 Temporary Directory Permissions (`/tmp`)
+**Symptom**  
+R package install and kernels fail with permission errors.
+
+**Tried**  
+- Re-running installs; cleaning tmp.
+
+**Fix**  
+✅ Set a user-scoped temporary directory:
+```bash
+mkdir -p "$HOME/tmp"
+export TMPDIR="$HOME/tmp"
+```
+
+---
+
+## 4.3 ODBC Driver Manager / Driver Not Found
+**Symptom**  
+`odbc` / `pyodbc` cannot locate driver manager or SQL Server driver despite `msodbcsql18` in `buildInputs`.
+
+**Tried (didn’t work)**  
+- `LD_LIBRARY_PATH` edits  
+- Only setting `ODBCINI` or user DSNs
+
+**Final Fix**  
+✅ Register the driver in a **user** `odbcinst.ini` and point `ODBCSYSINI` to it:
+
+```bash
+mkdir -p "$HOME/.odbc"
+export ODBCSYSINI="$HOME/.odbc"
+export ODBCINI="$HOME/.odbc/odbc.ini"
+
+cat > "$HOME/.odbc/odbcinst.ini" <<'EOF'
+[ODBC Drivers]
+ODBC Driver 18 for SQL Server=Installed
+
+[ODBC Driver 18 for SQL Server]
+Description=Microsoft ODBC Driver 18 for SQL Server
+Driver=/nix/store/...-msodbcsql18-*/lib/libmsodbcsql-18.*.so
+UsageCount=1
+EOF
+```
+
+> In a flake shell, reference the exact Nix store path (or `${pkgs.msodbcsql18}/lib/libmsodbcsql-18.*.so`).  
+> Validate: `odbcinst -q -d` should list the driver.
+
+---
+
+## 4.4 R in VS Code — `languageserver` Problem
+**Symptom**  
+VS Code R extension fails because `languageserver` cannot build within the Nix closure.
+
+**Tried**  
+- Keeping `languageserver` in `rWrapper.override`.
+
+**Fix**  
+✅ Remove from flake; install at runtime:
+```bash
+R -q -e 'if(!requireNamespace("languageserver", quietly=TRUE)) install.packages("languageserver")'
+```
+Optionally run that inside `shellHook` so the dev shell self-heals.
+
+---
+
+## 4.5 SQL Authentication (Headless)
+
+### R (works headless)
+Use Device Code auth via ODBC:
+```r
+library(DBI); library(odbc)
+con <- dbConnect(
+  odbc::odbc(),
+  Driver="ODBC Driver 18 for SQL Server",
+  Server=Sys.getenv("AZURE_SQL_SERVER"),
+  Database=Sys.getenv("AZURE_DATABASE"),
+  Encrypt="yes",
+  TrustServerCertificate="no",
+  Authentication="ActiveDirectoryDeviceCode"
+)
+```
+✅ No browser needed; ensure Device Code is allowed in tenant policy.
+
+### Python (headless fallback chain)
+Avoid GUI flows; prefer CLI → Device Code:
+```python
+from azure.identity import DefaultAzureCredential, AzureCliCredential, DeviceCodeCredential
+import struct, pyodbc
+
+scope = "https://database.windows.net/.default"
+cred = None
+try:
+    cred = DefaultAzureCredential(exclude_interactive_browser_credential=True)
+    token = cred.get_token(scope).token
+except Exception:
+    try:
+        token = AzureCliCredential().get_token(scope).token
+    except Exception:
+        token = DeviceCodeCredential(tenant_id="...").get_token(scope).token
+
+def _wide(t): 
+    w = t.encode("utf-16-le")
+    return struct.pack("=i", len(w)) + w
+
+conn = pyodbc.connect(
+    "Driver={ODBC Driver 18 for SQL Server};Server=...;Database=...;Encrypt=yes;TrustServerCertificate=no;",
+    attrs_before={1256: _wide(token)}
+)
+```
+✅ Robust headless auth; avoids interactive browser.
+
+---
+
+## 4.6 Secrets / Keyring in Headless
+**Symptom**  
+`keyring` defaults to backends that require a running Secret Service/DBus session; without it, it fails or falls back insecurely.
+
+**What didn’t work**  
+- Assuming `gnome-keyring` just “works” in SSH shells.
+
+**What worked**  
+✅ Document and choose one of:
+- Start a Secret Service (DBus) in shell init and use `libsecret`.
+- Use `pass` (Password Store) with the `python-keyring` Pass backend.
+- Enterprise: store secrets in **Azure Key Vault** and fetch at runtime.
+
+---
+
+## 4.7 Databricks Connect v2 Correction
+**Symptom**  
+Using plain `SparkSession.builder` yields a local Spark, not a remote Databricks-backed session.
+
+**Fix**  
+✅ Use the Connect v2 entry point:
+```python
+from databricks.connect import DatabricksSession
+spark = DatabricksSession.builder.getOrCreate()
+spark.sql("SELECT current_catalog(), current_schema()").show()
+```
+Ensure `DATABRICKS_HOST`/`DATABRICKS_TOKEN` (or auth profile) is configured.
+
+---
+
+## 4.8 FHS Sandbox (Fallback)
+**When needed**  
+If binary lookups and loader paths keep failing (e.g., R engine/ODBC artifacts), resort to `buildFHSEnv` to emulate traditional FHS layout so tools can find `/usr/lib`-style paths.
+
+**Note**  
+Use sparingly—prefer the simpler `odbcinst.ini` registration first.
+
+# 5. Known-Good `shellHook` Skeleton
+
+```bash
+# ODBC config
+mkdir -p "$HOME/.odbc" "$HOME/tmp"
+export ODBCSYSINI="$HOME/.odbc"
+export ODBCINI="$HOME/.odbc/odbc.ini"
+export TMPDIR="$HOME/tmp"
+
+# Register driver once
+ODBCINST="$HOME/.odbc/odbcinst.ini"
+if [ ! -s "$ODBCINST" ]; then
+  cat > "$ODBCINST" <<EOF
+[ODBC Drivers]
+ODBC Driver 18 for SQL Server=Installed
+
+[ODBC Driver 18 for SQL Server]
+Description=Microsoft ODBC Driver 18 for SQL Server
+Driver=${pkgs.msodbcsql18}/lib/libmsodbcsql-18.*.so
+UsageCount=1
+EOF
+fi
+
+# Minimal DSN (optional)
+if [ ! -s "$ODBCINI" ]; then
+  cat > "$ODBCINI" <<'EOF'
+[AzureSQL]
+Driver=ODBC Driver 18 for SQL Server
+Description=Azure SQL DB
+EOF
+fi
+
+# R languageserver self-heal
+R -q -e 'if(!requireNamespace("languageserver", quietly=TRUE)) install.packages("languageserver")' >/dev/null 2>&1 || true
+
+echo "Dev shell ready: ODBCSYSINI=$ODBCSYSINI | driver=$(odbcinst -q -d || echo N/A)"
+```
+
+# 6. Validation Checklist (Definition of Done)
+
+- [ ] `odbcinst -q -d` lists **ODBC Driver 18 for SQL Server**  
+- [ ] R connects headless with `Authentication=ActiveDirectoryDeviceCode`  
+- [ ] Python connects via token (CLI → Device Code fallback)  
+- [ ] No `I have no name!`; `id -un` returns a username  
+- [ ] `TMPDIR` is writable; R packages install cleanly  
+- [ ] Secrets are **not** stored in plaintext `.env` (use keyring/Key Vault)  
+- [ ] Databricks Connect v2 returns rows from a test query
+
+# 7. Anti-Patterns & Safer Alternatives
+
+| Anti-Pattern | Why it’s bad | Safer Alternative |
+|---|---|---|
+| Plaintext tokens in `.env` | Leaks via repo/shell history | `keyring`, Key Vault, or pass-store |
+| Interactive browser auth over SSH | Hangs or fails | Device Code / CLI credentials |
+| Only tweaking `LD_LIBRARY_PATH` | Brittle, opaque | Register driver in `odbcinst.ini` |
+| Forcing local Spark for Databricks work | Not equivalent | Databricks Connect v2 / SQL Warehouse |
+| Baking `languageserver` into flake | Build breaks in closures | Install at runtime in `shellHook` |
+
+# 8. Appendix: Reference Commands
+
+```bash
+# List ODBC drivers
+odbcinst -q -d
+
+# Sanity ping to SQL Server port
+nc -vz <server>.database.windows.net 1433
+
+# Azure CLI device code login (headless)
+az login --use-device-code
+az account show
+
+# Python quick token test
+python - <<'PY'
+from azure.identity import DeviceCodeCredential
+print("OK" if DeviceCodeCredential(tenant_id="...").get_token("https://database.windows.net/.default").token else "FAIL")
+PY
+```
+
+# 9. Next Steps
+
+- Add CI pre-flight checks for `odbcinst` and simple SQL query.  
+- Document the chosen **keyring backend** with exact init steps for your host(s).  
+- Optional: Adopt `buildFHSEnv` only when driver registration isn’t enough.  
+- Track ADBC maturity; add benchmarks alongside ODBC (see separate Benchmarks kit).

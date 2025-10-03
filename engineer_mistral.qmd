@@ -1,0 +1,164 @@
+Here is the content of the Quarto document for your reference:
+
+```yaml
+---
+title: "Engineering Spec & Post-Implementation Review: Polyglot Data Environment"
+author: "AI Assistant"
+date: "2025-10-03"
+format:
+  html:
+    toc: true
+    code-fold: true
+    number-sections: true
+---
+
+# 1. Overview & Requirements
+
+## 1.1 Executive Summary
+This document provides a post-implementation review of a headless, MFA-constrained, Nix-managed data environment. It details the architecture, troubleshooting history, and security analysis, focusing on reproducibility and secrets management.
+
+## 1.2 Connectivity Architecture
+```mermaid
+graph LR
+    A[SSH] --> B[Dev Server]
+    B --> C[Azure SQL]
+    B --> D[Databricks]
+    B --> E[Key Vault]
+```
+
+## 1.3 Use-Case Matrix
+
+| Use-Case       | Compute Locus | Constraints                  |
+|----------------|---------------|------------------------------|
+| Fully Remote   | Cloud         | MFA, No GUI                  |
+| Hybrid         | On-Prem/Cloud | Mixed Auth, Network Latency  |
+| Local          | Local Machine | Limited by Local Resources   |
+
+# 2. Environment & Build
+
+## 2.1 Why Nix
+Nix ensures reproducibility, dependency pinning, and declarative environment management. Note the use of `nixpkgs` with unfree packages for ODBC drivers.
+
+## 2.2 Final `flake.nix`
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  outputs = { self, nixpkgs }:
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
+    in {
+      devShells.${system}.default = pkgs.mkShell {
+        packages = with pkgs; [
+          unixODBC
+          libsecret
+          python3
+          R
+        ];
+      };
+    };
+}
+```
+
+## 2.3 Headless Keyring Backends
+- **Secret Service API**: Used for secure credential storage.
+- **pass**: Unix password manager for CLI environments.
+- **Azure Key Vault**: Cloud-based secrets management.
+
+# 3. Auth & Secrets (Headless-Safe)
+
+## 3.1 Auth Patterns
+
+### Device Code Flow (Python)
+```python
+from azure.identity import DeviceCodeCredential
+credential = DeviceCodeCredential()
+```
+
+### Managed Identity (R)
+```r
+library(DBI)
+con <- dbConnect(odbc::odbc(),
+                 Driver = "ODBC Driver 17 for SQL Server",
+                 Authentication = "ActiveDirectoryManagedIdentity")
+```
+
+### Service Principal
+```bash
+export AZURE_CLIENT_ID="your_client_id"
+export AZURE_TENANT_ID="your_tenant_id"
+export AZURE_CLIENT_SECRET="$(keyring get az-service-principal secret)"
+```
+
+## 3.2 Secrets Management
+- Use `keyring` in Python and `R`:
+  ```python
+  import keyring
+  keyring.set_password("service", "username", "password")
+  ```
+- **Databricks Tokens**: Store in Azure Key Vault.
+- **Anti-Patterns**: Avoid `.env` for secrets, `LD_LIBRARY_PATH` hacks, and browser-only flows.
+
+# 4. Connectivity Implementations
+
+## 4.1 Azure SQL
+### Python (`pyodbc`)
+```python
+import pyodbc
+conn = pyodbc.connect(
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "SERVER=your_server;"
+    "DATABASE=your_db;"
+    "UID=your_uid;"
+    "Authentication=ActiveDirectoryDeviceCode"
+)
+```
+
+### R
+```r
+library(odbc)
+con <- dbConnect(odbc::odbc(),
+                 Driver = "ODBC Driver 17 for SQL Server",
+                 Authentication = "ActiveDirectoryDeviceCode")
+```
+
+## 4.2 Databricks Connect v2
+```python
+from databricks.connect import DatabricksSession
+spark = DatabricksSession.builder.getOrCreate()
+```
+
+## 4.3 ADBC/Arrow
+ADBC and Arrow are preferred for high-performance data transfer, but check for runtime compatibility.
+
+# 5. Troubleshooting Log
+
+| Problem                     | Diagnosis                          | Final Outcome                     |
+|-----------------------------|-------------------------------------|-----------------------------------|
+| ODBC Driver Not Found       | Missing driver registration        | Updated `flake.nix`               |
+| MFA Prompt Fails            | Incorrect auth flow                 | Switched to Device Code Flow      |
+| Databricks Token Expired    | Token rotation policy not applied  | Automated token refresh           |
+
+# 6. Validation & DoD
+- Verify ODBC drivers: `odbcinst -q -d`
+- Test token flow: `az account get-access-token`
+- Databricks query: `spark.sql("SELECT 1").show()`
+
+# 7. Recommendations & Next Steps
+- Evaluate ADBC for broader compatibility.
+- Implement secrets rotation policy.
+- Add CI checks for environment validation.
+
+# 8. Assumptions, Gaps, and References
+
+## Assumptions
+- Nix environment is properly configured.
+- Azure permissions are correctly set.
+
+## References
+- [Azure Identity Python](https://docs.microsoft.com/en-us/python/api/overview/azure/identity-readme?view=azure-python)
+- [Databricks Connect](https://docs.databricks.com/dev-tools/databricks-connect.html)
+- [Nixpkgs Manual](https://nixos.org/manual/nixpkgs/stable/)
+```
+
+You can copy this content into a new file with a `.qmd` extension to use it directly.

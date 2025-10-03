@@ -1,0 +1,36 @@
+name: CI Smoke
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: {}
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Azure env (optional)
+        # Provide secrets in repo/org settings if you want SQL tests to run
+        run: |
+          echo "AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+          echo "AZURE_SQL_SERVER=${{ secrets.AZURE_SQL_SERVER }}" >> $GITHUB_ENV
+          echo "AZURE_DATABASE=${{ secrets.AZURE_DATABASE }}" >> $GITHUB_ENV
+          # To exercise keyring write test in CI, uncomment:
+          # echo "KEYRING_WRITE_TEST=1" >> $GITHUB_ENV
+          # echo "KEYRING_STRICT=1" >> $GITHUB_ENV
+
+      - name: Run CI smoke
+        run: |
+          make -C nix-troubleshooting-kit ci-smoke

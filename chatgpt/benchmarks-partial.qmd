@@ -1,0 +1,59 @@
+
+## Benchmarks Summary
+
+This partial reads a newline-delimited JSON file (default: `bench_results.jsonl`) produced by the benchmark scripts
+and renders comparison tables used in the **Comparison Benchmarks** section.
+
+> Set `results_path` in the document's parameters or define the environment variable `BENCH_RESULTS_PATH`.
+> Each line should be a JSON object like:  
+> `{"engine":"azure-sql-odbc","connect_ms":123.4,"query_s":2.345,"rows_returned":1000000}`
+
+```{r}
+#| label: load-bench-results
+#| message: false
+#| warning: false
+
+results_path <- Sys.getenv("BENCH_RESULTS_PATH", unset = "bench_results.jsonl")
+if (!file.exists(results_path)) {
+  stop(paste("Results file not found:", results_path))
+}
+
+lines <- readLines(results_path, warn = FALSE)
+jsonlite::validate(paste0("[", paste(lines, collapse = ","), "]"))
+
+df <- jsonlite::stream_in(textConnection(lines), verbose = FALSE)
+
+# Normalize common fields
+if (!"engine" %in% names(df)) df$engine <- "unknown"
+if (!"query_s" %in% names(df)) df$query_s <- NA_real_
+if (!"connect_ms" %in% names(df) && "connect_s" %in% names(df)) df$connect_ms <- df$connect_s * 1000
+
+df$connect_ms <- as.numeric(df$connect_ms)
+df$query_s <- as.numeric(df$query_s)
+
+knitr::kable(df, caption = sprintf("Raw benchmark results (%d rows)", nrow(df)))
+```
+
+### Aggregated by Engine
+
+```{r}
+agg <- aggregate(cbind(connect_ms, query_s) ~ engine, data = df, FUN = function(x) c(mean=mean(x, na.rm=TRUE), p50=stats::median(x, na.rm=TRUE)))
+# Unpack the matrix columns into flat numeric columns
+unpack <- function(m) data.frame(mean=m[, "mean"], p50=m[, "p50"])
+out <- data.frame(
+  engine = agg$engine,
+  connect_ms_mean = unpack(agg$connect_ms)$mean,
+  connect_ms_p50  = unpack(agg$connect_ms)$p50,
+  query_s_mean    = unpack(agg$query_s)$mean,
+  query_s_p50     = unpack(agg$query_s)$p50
+)
+knitr::kable(out, digits = 3, caption = "Aggregated metrics by engine (mean & p50)")
+```
+
+### Notes
+- Ensure each benchmark script appends a single JSON line to `bench_results.jsonl`. For example:
+  - Python: `python benchmark_sql_odbc.py >> bench_results.jsonl`
+  - R: `Rscript benchmark_sql_odbc.R | tail -n +1 >> bench_results.jsonl`
+- To separate runs, keep a dated file per run, e.g., `results/bench_2025-10-03.jsonl`.
+```
+

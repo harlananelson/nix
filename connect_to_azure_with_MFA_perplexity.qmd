@@ -1,0 +1,185 @@
+Does this version seem better?
+
+---
+title: "Connecting to Azure Data Resources with MFA from a Headless Nix Environment"
+format: html
+editor: visual
+---
+
+### Introduction
+
+This document provides a definitive guide for connecting to Azure data resources from a Nix-managed, headless Linux environment. It is divided into chapters covering distinct connection patterns and emphasizes a secure, hybrid approach to managing credentials.
+
+------------------------------------------------------------------------
+
+### Chapter 1: Direct Connection to Azure SQL Warehouse
+
+This chapter details the direct method for querying an Azure SQL database using ODBC.
+
+#### 1.1 The Definitive `flake.nix` (with Keyring Support)
+
+This updated `flake.nix` now includes the `keyring` libraries for both Python and R to enable secure, system-level credential storage.
+
+``` nix
+{
+  description = "A reproducible Data Science environment for Azure";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, flake-utils }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        };
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            # Python with required packages
+            (python3.withPackages (ps: with ps; [
+              pyodbc
+              azure-identity
+              pandas
+              python-dotenv
+              keyring # For secure secret storage
+            ]))
+
+            # R with required packages
+            (rWrapper.override {
+              packages = with rPackages; [
+                tidyverse
+                dbplyr
+                reticulate # To call Python from R
+                keyring    # For secure secret storage
+              ];
+            })
+
+            # System Dependencies for ODBC and MFA
+            unixODBC
+            msodbcsql18
+            krb5
+            openssl
+            azure-cli
+            libsecret # Provides the secret-service API for keyring on Linux
+          ];
+
+          shellHook = ''
+            # ... (shellHook content remains the same as before) ...
+          '';
+        };
+      });
+}
+```
+
+#### 1.2 A Hybrid Approach to Secrets Management
+
+We will use a two-part strategy for managing credentials:
+
+1.  **`~/.my-secrets` File**: For **non-sensitive configuration** like usernames and server names. This file is language-agnostic and easy to manage.
+2.  **System Keychain**: For **truly sensitive credentials** like API tokens. We'll use the `keyring` library, which provides a common interface to the macOS Keychain, Windows Credential Manager, or the Secret Service API on Linux (`libsecret`). This encrypts secrets at rest.
+
+#### 1.3 Authentication & Connection with Python
+
+The Python script still uses the Device Code Flow for MFA, as that token is temporary. The principle of using `keyring` is shown here for completeness and is used in Chapter 2 for the Databricks token.
+
+**`~/.my-secrets` file:**
+
+```         
+# Non-sensitive configuration
+AZURE_SERVER="your_server_name.database.windows.net"
+AZURE_DATABASE="your_database_name"
+```
+
+**Python Connection Script (`azure_connect.py`):**
+
+``` python
+import os
+import pyodbc
+import pandas as pd
+from dotenv import load_dotenv
+from azure.identity import DeviceCodeCredential
+import struct
+import keyring
+
+# Load non-sensitive config from ~/.my-secrets
+load_dotenv(dotenv_path=os.path.expanduser("~/.my-secrets"))
+server = os.getenv("AZURE_SERVER")
+database = os.getenv("AZURE_DATABASE")
+
+# Example of securely storing and retrieving a sensitive value
+# Run this once to set a secret:
+# keyring.set_password("my-service", "my-username", "super-secret-api-key")
+# my_api_key = keyring.get_password("my-service", "my-username")
+
+def get_azure_sql_connection():
+    """Establishes a connection to Azure SQL using MFA Device Code Flow."""
+    # The MFA token is generated dynamically, so it's not stored in the keychain.
+    # The keychain is for long-lived secrets like the Databricks token in Ch. 2.
+    credential = DeviceCodeCredential()
+    token_obj = credential.get_token("[https://database.windows.net/.default](https://database.windows.net/.default)")
+    token_bytes = bytes(token_obj.token, "UTF-8")
+    exp_token = b''.join(bytes([b, 0]) for b in token_bytes)
+    token_struct = struct.pack("=i", len(exp_token)) + exp_token
+    
+    conn_str = f"Driver={{ODBC Driver 18 for SQL Server}};Server={server};Database={database};Encrypt=yes;"
+    return pyodbc.connect(conn_str, attrs_before={1256: token_struct})
+
+# Example Usage
+cnxn = get_azure_sql_connection()
+df = pd.read_sql("SELECT TOP 10 * FROM your_table_name;", cnxn)
+cnxn.close()
+```
+
+------------------------------------------------------------------------
+
+### Chapter 2: Connecting via Spark/Databricks (Securely)
+
+This workflow is the perfect use case for the system keychain, as a Databricks token is a long-lived, sensitive secret.
+
+#### 2.1 Storing Your Databricks Token
+
+First, store your token securely from the command line or an R/Python script. You only need to do this once.
+
+From your terminal:
+
+``` bash
+# Set the secret using Python's keyring
+python -c "import keyring; keyring.set_password('databricks', 'your-databricks-host.azuredatabricks.net', 'your-api-token')"
+```
+
+#### 2.2 Connecting with `sparklyr` in R
+
+The R script can now retrieve this token from the secure keychain at runtime, keeping it out of your code and plaintext files.
+
+``` r
+library(sparklyr)
+library(dplyr)
+library(keyring) # Load the keyring package
+
+# Retrieve the Databricks host from a non-sensitive config file or env var
+db_host <- "your-databricks-host.azuredatabricks.net"
+
+# Securely retrieve the token from the system keychain
+db_token <- key_get("databricks", db_host)
+
+# Connect to Databricks
+sc <- spark_connect(
+  method = "databricks",
+  envvars = list(
+    DATABRICKS_HOST = db_host,
+    DATABRICKS_TOKEN = db_token
+  ),
+  cluster_id = "your-cluster-id"
+)
+
+# ... your sparklyr dplyr code ...
+
+spark_disconnect(sc)
+```
+
+This updated structure provides a much more secure and professional foundation for managing your data connections.

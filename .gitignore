@@ -1,0 +1,7 @@
+# Ignore the file containing sensitive search patterns
+.secrets_patterns.txt
+
+# Other files to ignore...
+.venv/
+.R/
+*.log

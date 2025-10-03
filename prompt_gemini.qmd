@@ -1,0 +1,85 @@
+Of course. To get an AI system to generate a high-quality engineering document like the one we created, you need a prompt that is specific, defines a persona, provides all the necessary context, and clearly outlines the desired structure.
+
+Here is a robust, reusable prompt template designed to achieve that.
+
+-----
+
+### \#\# Prompt Template for Generating an Engineering Document
+
+````
+## ROLE
+
+Act as a meticulous Senior Data Engineer and Technical Writer. Your task is to synthesize a complex troubleshooting session and a set of architectural requirements into a single, comprehensive engineering document. Your tone should be professional, analytical, and exhaustive.
+
+---
+
+## TASK
+
+Review the three pieces of context provided below: [CONTEXT 1: System Requirements], [CONTEXT 2: Connectivity Protocols], and [CONTEXT 3: Troubleshooting History]. Generate a single, coherent engineering specification and troubleshooting log in Quarto (`.qmd`) format that consolidates all of this information. The document should tell the complete story of the project, from its high-level goals to the specific, iterative steps taken to achieve a working implementation.
+
+---
+
+## CONTEXT
+
+**[CONTEXT 1: System Requirements]**
+> * Connect to Databricks for fully remote compute (using both clusters and SQL warehouses).
+> * Connect to Databricks for hybrid compute, where Spark jobs run remotely but data is collected and processed locally with Pandas/Polars.
+> * Connect to an MS SQL Server for DDL/DML operations and data transfer.
+> * The environment must support both R and Python.
+> * A local Spark instance is needed for development to achieve parity with the remote system.
+
+**[CONTEXT 2: Connectivity Protocols]**
+> * Primary user access is via SSH to a remote Linux development server.
+> * From the server, connections to data platforms are made using three primary protocols: ODBC, Apache Arrow (ADBC), and Databricks Connect.
+
+**[CONTEXT 3: Troubleshooting History]**
+> * **Initial Problem:** A Nix shell had a user identity issue (`I have no name!`) and an R kernel installation failed with a `/tmp` permission error.
+> * **Resolution:** Solved by adding the `shadow` package and redirecting the temporary directory with the `TMPDIR` variable.
+> * **Second Problem:** A persistent R `odbc` error: "Unable to locate the unixODBC driver manager."
+> * **Failed Attempts:** Setting `LD_LIBRARY_PATH`, `ODBCINI`, and other environment variables did not work.
+> * **Third Problem:** A VS Code integration issue where R was "not recognized."
+> * **Resolution:** This was caused by a build failure of the `languageserver` package in Nix. The fix was to remove it from the Nix build and instead install it locally using R's own package manager inside the `shellHook`.
+> * **Final ODBC Resolution:** The persistent ODBC error was finally solved by refactoring the entire Nix shell into a `buildFHSEnv` (FHS) sandbox and manually creating the R Jupyter kernel's `kernel.json` file to forcefully inject FHS-aware paths (`/usr/lib`).
+> * **Strategic Pivot:** Due to the complexity of the ODBC solution, a proposal was made to evaluate ADBC as a simpler, more modern alternative.
+
+---
+
+## STRUCTURE & FORMATTING REQUIREMENTS
+
+Produce a single Quarto (`.qmd`) document with the following YAML header and section structure. Use code folding for all code blocks.
+
+**YAML Header:**
+```yaml
+---
+title: "Engineering Specification & Troubleshooting Log: A Polyglot Data Science Environment"
+author: "AI Assistant"
+date: "current_date"
+format: 
+  html:
+    toc: true
+    code-fold: true
+---
+````
+
+**Document Sections:**
+
+**1. Overview & System Requirements**
+\* **1.1. Executive Summary:** Briefly summarize the project's goals.
+\* **1.2. Connectivity Architecture:** Describe the layered connection model (SSH -\> Dev Server -\> Protocols). **You must include a Mermaid diagram to visualize this flow.**
+\* **1.3. System Architecture: Use Case Matrix:** Create a detailed table based on [CONTEXT 1] that outlines the different execution models (Fully Remote, Hybrid, etc.), their compute locus, and key architectural considerations.
+
+**2. Implementation via Nix Flake**
+\* **2.1. Rationale for Nix:** Briefly explain why Nix was chosen for this project (e.g., reproducibility).
+\* **2.2. Final `flake.nix` Configuration:** Provide the complete, final, working `flake.nix` code that resulted from the troubleshooting process.
+
+**3. Troubleshooting Log & Resolution History**
+\* Create a detailed, chronological account of the entire debugging process based on [CONTEXT 3].
+\* For each major issue (User Identity, ODBC Failure, VS Code Integration), create a subsection.
+\* Within each subsection, detail the **Problem Description**, the **Diagnosis**, all **Attempted Solutions** (including failed ones and the logic behind them), and the **Final Outcome**.
+
+**4. Future Direction & Recommendations**
+\* Summarize the strategic pivot to evaluating ADBC.
+\* Outline the recommended next steps for this evaluation.
+
+```
+```
