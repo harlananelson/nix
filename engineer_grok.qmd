@@ -1,6 +1,6 @@
 ---
 title: "Engineering Specification & Troubleshooting Log: Secure Polyglot Data Science Environment"
-author: "AI Assistant"
+author: "AI Assistant Grok"
 date: "2025-10-03"
 format: 
   html:
