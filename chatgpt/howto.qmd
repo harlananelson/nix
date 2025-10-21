@@ -1,0 +1,48 @@
+---
+title: "Nix Troubleshooting and Benchmarking Guide"
+format: html
+date: today
+author: "Your Name"
+---
+
+## Overview
+
+This guide provides instructions for using the Nix troubleshooting kit and benchmarking tools with Quarto integration.
+
+## Available Downloads
+
+The following resources are available:
+
+- **Nix troubleshooting kit** (with CI workflow & scripts): `nix-troubleshooting-kit.zip`
+- **Benchmarks kit** (Python, R, Rust + Makefile): `benchmarks.zip`  
+- **Quarto partial** for rendering benchmark results: `benchmarks-partial.qmd`
+
+## Using the Quarto Partial
+
+### Step 1: Run Benchmarks
+
+Navigate to the benchmarks directory and collect JSON lines data:
+
+```bash
+cd benchmarks
+# Set your environment variables first
+export AZURE_*="your_azure_values"
+export DATABRICKS_*="your_databricks_values"
+make all  # appends JSON to bench_results.jsonl
+```
+
+### Step 2: Include in Quarto Document
+
+	2.	In your main Quarto doc, include the partial and point it to your results file:
+
+params:
+  results_path: bench_results.jsonl
+
+{{< include "quarto/partials/benchmarks-partial.qmd" >}}
+
+Or set an environment variable:
+
+export BENCH_RESULTS_PATH="bench_results.jsonl"
+quarto render your-doc.qmd
+
+If you want this wired into your repo with paths adjusted to your structure, send me your intended folder layout and I’ll tailor the includes and Make targets. ￼

@@ -1,29 +1,32 @@
-Great—here’s a drop-in appendix section for your nix-troubleshooting.qmd plus a matching, minimal-but-complete flake.nix you can save next to it. This flake mirrors the log’s fixes: user-scoped ODBC driver registration, headless-safe auth, and a self-healing shellHook (no GUI auth; device-code/CLI only).
+---
+title: "Nix Azure Data Development Environment"
+format: html
+date: today
+author: "Development Team"
+toc: true
+code-fold: false
+---
 
-⸻
+## Overview
 
-️⃣ Appendix block to paste into nix-troubleshooting.qmd
+This document provides a minimal, pinned Nix flake that creates a reproducible development environment for Azure SQL database work with R and Python. The environment includes headless authentication, proper ODBC driver registration, and VS Code integration.
 
-# A. Reproducible Dev Shell (flake.nix)
+## Features
 
-This appendix provides a minimal, pinned **Nix flake** that reproduces the working environment described in this log:
+The development shell includes:
 
-- Microsoft **ODBC Driver 18** present and **registered** (user-scoped `odbcinst.ini`)
-- Headless-safe **Azure SQL** auth (R: `ActiveDirectoryDeviceCode`, Python: CLI → Device Code)
-- `TMPDIR` set; quick **languageserver** bootstrap for VS Code R extension
-- No plaintext secrets; recommend keyring/Key Vault per main doc
+- **Microsoft ODBC Driver 18** with proper user-scoped registration
+- **Headless-safe Azure SQL** authentication (R: `ActiveDirectoryDeviceCode`, Python: CLI → Device Code)
+- **TMPDIR** configuration and quick **languageserver** bootstrap for VS Code R extension
+- **No plaintext secrets** - uses keyring/Key Vault as recommended
 
-Save the file below as `flake.nix` in the repository root, then run:
+## Setup Instructions
 
-```bash
-nix develop       # or: nix develop .#devShells.x86_64-linux.default
-# inside the shell:
-odbcinst -q -d    # should list 'ODBC Driver 18 for SQL Server'
+### Step 1: Create the Flake
 
-If you need FHS emulation for stubborn pathing issues, see the commented “Optional FHS shell” section inside the file.
+Save the following as `flake.nix` in your repository root:
 
-A.1 flake.nix
-
+```nix
 {
   description = "Headless Azure Data Dev Shell (ODBC + R/Python)";
 
@@ -127,39 +130,138 @@ EOF
       }
     );
 }
+```
 
-A.2 Quick usage snippets
+### Step 2: Enter the Development Shell
 
-R (headless device code)
+```bash
+nix develop       # or: nix develop .#devShells.x86_64-linux.default
 
-library(DBI); library(odbc)
+# Verify ODBC driver registration:
+odbcinst -q -d    # should list 'ODBC Driver 18 for SQL Server'
+```
+
+## Usage Examples
+
+### R Connection (Headless Device Code)
+
+```r
+library(DBI)
+library(odbc)
+
 con <- dbConnect(odbc::odbc(),
-  Driver="ODBC Driver 18 for SQL Server",
-  Server=Sys.getenv("AZURE_SQL_SERVER"),
-  Database=Sys.getenv("AZURE_DATABASE"),
-  Encrypt="yes", TrustServerCertificate="no",
-  Authentication="ActiveDirectoryDeviceCode"
+  Driver = "ODBC Driver 18 for SQL Server",
+  Server = Sys.getenv("AZURE_SQL_SERVER"),
+  Database = Sys.getenv("AZURE_DATABASE"),
+  Encrypt = "yes", 
+  TrustServerCertificate = "no",
+  Authentication = "ActiveDirectoryDeviceCode"
 )
-dbGetQuery(con, "SELECT TOP 1 name FROM sys.databases"); dbDisconnect(con)
 
-Python (CLI → Device Code fallback, no GUI)
+# Test connection
+result <- dbGetQuery(con, "SELECT TOP 1 name FROM sys.databases")
+print(result)
 
-import struct, pyodbc
-from azure.identity import DefaultAzureCredential, AzureCliCredential, DeviceCodeCredential
+# Clean up
+dbDisconnect(con)
+```
+
+### Python Connection (CLI → Device Code Fallback)
+
+```python
+import struct
+import pyodbc
+from azure.identity import (
+    DefaultAzureCredential, 
+    AzureCliCredential, 
+    DeviceCodeCredential
+)
+
+# Get access token with fallback chain
 scope = "https://database.windows.net/.default"
 try:
-    tok = DefaultAzureCredential(exclude_interactive_browser_credential=True).get_token(scope).token
+    tok = DefaultAzureCredential(
+        exclude_interactive_browser_credential=True
+    ).get_token(scope).token
 except Exception:
-    try: tok = AzureCliCredential().get_token(scope).token
-    except Exception: tok = DeviceCodeCredential(tenant_id="YOUR_TENANT_ID").get_token(scope).token
-w = tok.encode("utf-16-le"); access = struct.pack("=i", len(w)) + w
+    try: 
+        tok = AzureCliCredential().get_token(scope).token
+    except Exception: 
+        tok = DeviceCodeCredential(
+            tenant_id="YOUR_TENANT_ID"
+        ).get_token(scope).token
+
+# Prepare token for ODBC
+w = tok.encode("utf-16-le")
+access = struct.pack("=i", len(w)) + w
+
+# Connect to database
 cn = pyodbc.connect(
-  "Driver={ODBC Driver 18 for SQL Server};Server="+
-  "YOUR_SERVER.database.windows.net;Database=YOUR_DB;Encrypt=yes;TrustServerCertificate=no;",
-  attrs_before={1256: access})
-print("OK", cn.cursor().execute("SELECT 1").fetchone()); cn.close()
+    "Driver={ODBC Driver 18 for SQL Server};"
+    "Server=YOUR_SERVER.database.windows.net;"
+    "Database=YOUR_DB;"
+    "Encrypt=yes;"
+    "TrustServerCertificate=no;",
+    attrs_before={1256: access}
+)
 
+# Test connection
+cursor = cn.cursor()
+result = cursor.execute("SELECT 1").fetchone()
+print("Connection OK:", result)
 
-⸻
+# Clean up
+cn.close()
+```
 
-If you’d like, I can also generate a tiny flake.lock (pinned to current unstable) or a make dev helper to enter the shell and run a 10-second connectivity smoke test automatically.
+## Environment Variables
+
+Set these environment variables for your Azure setup:
+
+```bash
+export AZURE_SQL_SERVER="your-server.database.windows.net"
+export AZURE_DATABASE="your_db"
+export AZURE_TENANT_ID="your-tenant-id"  # for Python DeviceCode fallback
+```
+
+## Troubleshooting
+
+### ODBC Driver Issues
+
+If the ODBC driver isn't found:
+
+```bash
+# Check driver registration
+odbcinst -q -d
+
+# Verify driver file exists
+ls -la ~/.odbc/odbcinst.ini
+
+# Check environment variables
+echo $ODBCSYSINI
+echo $ODBCINI
+```
+
+### Authentication Issues
+
+- **R**: Uses `ActiveDirectoryDeviceCode` - follow the device code prompts
+- **Python**: Uses credential chain fallback - ensure `az login` is completed or device code flow works
+
+### FHS Shell Alternative
+
+If you encounter stubborn loader/path issues, uncomment the FHS shell section in the flake and use:
+
+```bash
+nix develop .#fhs
+```
+
+## Next Steps
+
+This environment provides a solid foundation for Azure SQL development. Consider:
+
+1. Adding project-specific R packages or Python dependencies
+2. Creating Makefile targets for common development tasks  
+3. Integrating with CI/CD pipelines using the same Nix environment
+4. Adding additional Azure services as needed
+
+The flake can be extended with additional tools and packages as your project requirements evolve.

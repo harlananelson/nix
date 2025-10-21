@@ -1,4 +1,4 @@
-### ---
+---
 title: "Connecting to Azure Data Resources with MFA from a Headless Nix Environment"
 subtitle: "A Comprehensive Guide Based on Real-World Implementation Experience"
 author: "Claude"

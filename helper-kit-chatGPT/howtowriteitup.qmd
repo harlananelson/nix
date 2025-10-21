@@ -1,0 +1,134 @@
+---
+title: "Nix Troubleshooting Kit Setup Guide"
+format: html
+date: today
+author: "Your Name"
+toc: true
+---
+
+## Overview
+
+This guide covers the setup and usage of a CI-ready Nix troubleshooting kit that includes ODBC checking, keyring validation, and automated GitHub Actions workflows.
+
+## What's Included ✅
+
+The troubleshooting kit provides:
+
+- **CI-ready Makefile** with `ci-smoke`, `odbc-check`, and `keyring-check` targets
+- **Health check scripts:**
+  - `check-odbc.sh` — verifies driver registration and the actual `.so` path
+  - `keyring-health.sh` — prints backend; optional write test
+- **GitHub Actions workflow:** `.github/workflows/ci-smoke.yml`
+- **Updated Makefile** for streamlined operations
+
+## Setup Instructions
+
+### Step 1: Place the Kit
+
+Place the entire troubleshooting kit folder beside your `flake.nix` file (or adjust the `-C` path accordingly):
+
+```bash
+# Directory structure should look like:
+your-project/
+├── flake.nix
+├── nix-troubleshooting-kit/
+│   ├── Makefile
+│   ├── check-odbc.sh
+│   ├── keyring-health.sh
+│   └── .github/workflows/ci-smoke.yml
+```
+
+### Step 2: Test Locally (Optional)
+
+Run the smoke tests locally to verify everything works:
+
+```bash
+make -C nix-troubleshooting-kit ci-smoke
+```
+
+### Step 3: Configure CI (GitHub Actions)
+
+1. **Commit the folder** including `.github/workflows/ci-smoke.yml` to your repository
+
+2. **Add repository secrets** if you want live Azure tests:
+   - `AZURE_TENANT_ID`
+   - `AZURE_SQL_SERVER` 
+   - `AZURE_DATABASE`
+
+3. **Optional: Enable stricter keyring validation** by setting these environment variables in the workflow:
+   - `KEYRING_WRITE_TEST=1` — performs a safe write/delete roundtrip test
+   - `KEYRING_STRICT=1` — makes keyring validation failures cause CI to fail
+
+## Behavior Notes
+
+### Default Behavior
+
+- **`ci-smoke`** always checks ODBC driver registration and path
+- **Azure SQL tests** automatically skip if environment variables aren't present
+- **`keyring-health.sh`** is advisory by default (won't fail CI)
+
+### Strict Mode
+
+Enable strict keyring validation for production environments:
+
+```yaml
+# In your GitHub workflow file
+env:
+  KEYRING_STRICT: 1
+  KEYRING_WRITE_TEST: 1
+```
+
+## Usage Examples
+
+### Local Testing
+
+```bash
+# Run all smoke tests
+make -C nix-troubleshooting-kit ci-smoke
+
+# Run individual checks
+make -C nix-troubleshooting-kit odbc-check
+make -C nix-troubleshooting-kit keyring-check
+```
+
+### CI Integration
+
+The GitHub Actions workflow will automatically:
+
+1. Set up the Nix environment
+2. Run ODBC driver verification
+3. Test Azure SQL connectivity (if secrets are configured)
+4. Validate keyring functionality
+5. Report results in CI logs
+
+## Troubleshooting
+
+### Common Issues
+
+- **ODBC driver not found**: Check that your Nix configuration includes the necessary ODBC drivers
+- **Keyring backend unavailable**: Verify that your system has a supported keyring backend
+- **Azure connection failures**: Ensure your repository secrets are correctly configured
+
+### Debug Commands
+
+```bash
+# Check ODBC driver registration manually
+./check-odbc.sh
+
+# Test keyring functionality
+./keyring-health.sh
+
+# Verbose Makefile output
+make -C nix-troubleshooting-kit ci-smoke VERBOSE=1
+```
+
+## Next Steps
+
+This troubleshooting kit can be extended with:
+
+- Additional database connectivity tests
+- Custom health check scripts for your specific services  
+- Quarto partials that load CI JSON output into documentation
+- Integration with other CI/CD platforms beyond GitHub Actions
+
+For bundled downloads or Quarto integration options, contact your development team.￼

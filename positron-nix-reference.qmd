@@ -1,0 +1,349 @@
+---
+title: "Positron + Nix R (Remote‑SSH) — Reference Architecture"
+author: "Your Team"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    code-copy: true
+    embed-resources: true
+    smooth-scroll: true
+  pdf:
+    toc: true
+    number-sections: true
+    documentclass: scrreprt
+highlight-style: github
+editor: visual
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{=html}
+<details open>
+<summary><strong>Overview</strong> (click to collapse)</summary>
+```
+
+This guide makes Positron reliably use a **Nix‑supplied R** for its Console, avoiding common pitfalls:
+
+- PATH confusion or “unusable” R validation in Positron
+- `jemalloc`/`SIGABRT` crashes
+- `.Rprofile` or `.RData` side‑effects
+- Remote‑SSH path/scope problems
+
+You get:
+
+- A Nix dev shell providing R, Python, ODBC deps, etc.
+- Minimal `.envrc` for direnv activation.
+- A dedicated **`R-positron` wrapper** that Positron accepts and prefers.
+- Remote-SSH–safe configuration (interpreter pinned explicitly).
+- A verification checklist to confirm each layer works.
+
+```{=html}
+</details>
+```
+
+## Directory layout (example)
+
+```
+/app/projects/clinressys01_t1/
+├─ clinresearchr/                  # your local R package (ideally a git repo)
+└─ qinglan/                        # the project using that package
+   ├─ flake.nix
+   ├─ .envrc
+   └─ .vscode/
+      └─ settings.json             # points Positron at your wrapper
+~/bin/
+└─ R-positron                      # wrapper Positron launches
+```
+
+> Adjust paths to your environment. All paths below assume this layout.
+
+```{=html}
+<details open>
+<summary><strong>2) flake.nix (production‑safe)</strong></summary>
+```
+
+- Keeps Nix’s `rWrapper` intact (no post‑patching).
+- Adds `sqlite` (so Python’s stdlib `sqlite3` works).
+- Avoids `jemalloc` preload to prevent R `SIGABRT` in IDE‑spawned sessions.
+- Pin stable channel by default; you **may** swap to `nixos‑unstable` for newer R pkgs.
+
+```{.nix}
+{
+  description = "Qinglan analysis project with clinresearch tools";
+
+  inputs = {
+    # You can pin stability (24.05) or track latest features:
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";      # stable
+    # nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";  # bleeding edge R packages
+
+    # Local package as a proper flake input (impure until you commit it)
+    clinresearchr.url = "git+file:///app/projects/clinressys01_t1/clinresearchr";
+  };
+
+  outputs = { self, nixpkgs, clinresearchr }:
+    let
+      system = builtins.currentSystem or "x86_64-linux";
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
+
+      # Clean the local R package source to keep builds pure (excluding dev artifacts)
+      clinresearchrSrc = pkgs.lib.cleanSourceWith {
+        src = clinresearchr;
+        filter = path: type:
+          let b = baseNameOf path; in
+          b != ".git" && b != ".venv" && b != ".odbc" && b != "R_libs";
+      };
+
+      # Build your custom R package
+      clinresearchrPkg = pkgs.rPackages.buildRPackage {
+        name = "clinresearchr";
+        src = clinresearchrSrc;
+        propagatedBuildInputs = with pkgs.rPackages; [
+          arrow data_table here processx dbplyr dplyr glue
+        ];
+      };
+
+      # R with needed packages + your local package
+      wrappedR = pkgs.rWrapper.override {
+        packages = with pkgs.rPackages; [
+          arrow data_table dbplyr ggsurvfit glue gtsummary here jsonlite knitr
+          lubridate odbc pacman survival targets tidyverse processx
+        ] ++ [ clinresearchrPkg ];
+      };
+
+    in {
+      devShells.${system}.default = pkgs.mkShell {
+        # If msodbcsql18 needs patching or license acceptance on your platform:
+        # nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+
+        buildInputs = with pkgs; [
+          (python311.withPackages (ps: [ ps.numpy ps.pandas ]))
+          sqlite
+          unixODBC unixODBCDrivers.msodbcsql18
+          curl azure-cli glibcLocales
+          wrappedR
+        ];
+        shellHook = ''
+          export ODBCSYSINI=$(pwd)/.odbc
+          export LANG=en_US.UTF-8
+          # Avoid jemalloc preload — causes R to SIGABRT in IDE sessions
+          unset LD_PRELOAD
+          echo "✅ Qinglan project environment ready!"
+        '';
+      };
+    };
+}
+```
+
+```{=html}
+</details>
+```
+
+```{=html}
+<details open>
+<summary><strong>3) .envrc (keep it minimal)</strong></summary>
+```
+
+**Impure (fastest to get going):**
+```
+use flake --impure
+```
+
+**Pure (once your local package is a committed git flake):**
+```
+use flake .
+```
+
+> After creating/updating this file, run `direnv allow` in the project root.  
+> If your system needs experimental features:  
+> `nix develop --extra-experimental-features 'nix-command flakes'`
+
+```{=html}
+</details>
+```
+
+```{=html}
+<details open>
+<summary><strong>4) Positron‑compatible wrapper (<code>~/bin/R-positron</code>)</strong></summary>
+```
+
+Positron validates R executables. Provide a tiny shell script with the expected marker and a stable environment, then delegate to Nix. Use `--vanilla` to ignore `~/.Rprofile` and `.RData`. Parameterize `PROJECT_DIR` for multi‑project use.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+# Shell wrapper for R executable.
+R_HOME_DIR="/nix/var/nix/profiles/default/lib/R"  # Positron checks for this line
+
+PROJECT_DIR="${PROJECT_DIR:-/app/projects/clinressys01_t1/qinglan}"
+NIX="$(command -v nix)"
+
+# Clean R session to avoid user/site profiles interfering with IDE sessions
+exec "$NIX" develop --impure "$PROJECT_DIR" --command R --vanilla "$@"
+```
+
+Make it executable:
+```bash
+chmod +x ~/bin/R-positron
+```
+
+**Pure‑mode switch later:** drop `--impure` once you convert your local dependency to a fully pure flake (see §8).
+
+```{=html}
+</details>
+```
+
+```{=html}
+<details open>
+<summary><strong>5) Positron settings (remote scope, pinned interpreter)</strong></summary>
+```
+
+Create or edit:
+
+**`/app/projects/clinressys01_t1/qinglan/.vscode/settings.json`**
+```json
+{
+  "positron.r.interpreters.default": "/home/clinressys01_t1/bin/R-positron",
+  "positron.r.interpreters.startupBehavior": "manual"
+}
+```
+
+> Manual startup lets you explicitly start the correct interpreter from the picker and avoids auto‑starting a wrong system R.
+
+```{=html}
+</details>
+```
+
+```{=html}
+<details open>
+<summary><strong>6) Remote‑SSH hygiene</strong></summary>
+```
+
+- Always edit **remote** settings (you’ll see “Remote” in the settings title).
+- If Positron gets confused, **reset the server** on the remote:
+  ```bash
+  pkill -f .positron-server || true
+  ```
+- Reconnect the Remote‑SSH window and select **R‑positron** in the Interpreter picker.
+
+```{=html}
+</details>
+```
+
+```{=html}
+<details open>
+<summary><strong>7) Verification checklist (run on the remote)</strong></summary>
+```
+
+```bash
+# Project dir ready; direnv active
+cd /app/projects/clinressys01_t1/qinglan
+direnv reload && nix flake check
+
+# Nix R inside dev shell
+nix develop --impure . -c R --version
+nix develop --impure . -c R -q -e 'print(R.version.string); q()'
+
+# Python sqlite present
+nix develop --impure . -c python -c "import sqlite3, sys; print('sqlite3 OK', sys.version)"
+
+# Wrapper executes a clean R (no .Rprofile/.RData side-effects)
+~/bin/R-positron -q -e 'cat("wrapper OK\n"); q()'
+```
+
+In the Positron Console (after selecting **R‑positron**):
+```r
+cat(R.version.string, "\n")
+Sys.getenv("R_HOME")
+capabilities()
+```
+
+You should see your Nix R version, a sensible `R_HOME`, and no crashes.
+
+```{=html}
+</details>
+```
+
+```{=html}
+<details open>
+<summary><strong>8) Going pure (drop <code>--impure</code> cleanly)</strong></summary>
+```
+
+1. Ensure `clinresearchr/` is a **git repo with commits**.
+2. Keep the flake input as:
+   ```nix
+   inputs.clinresearchr.url = "git+file:///app/projects/clinressys01_t1/clinresearchr";
+   ```
+3. Update inputs:
+   ```bash
+   cd /app/projects/clinressys01_t1/qinglan
+   nix flake update
+   ```
+4. Switch:
+   - `.envrc` → `use flake .`
+   - `R-positron` → drop `--impure`:
+     ```bash
+     exec "$NIX" develop "$PROJECT_DIR" --command R --vanilla "$@"
+     ```
+
+Now your build is reproducible without impurity.
+
+```{=html}
+</details>
+```
+
+```{=html}
+<details open>
+<summary><strong>9) Troubleshooting (fast path)</strong></summary>
+```
+
+| Symptom | Quick probe | Fix |
+|---|---|---|
+| Positron lists wrong/empty R | Settings scope wrong? | Edit **remote** settings; pin `R-positron`; `startupBehavior=manual`. |
+| R “unusable” in Positron | Using raw `/nix/store/.../R`? | Use **wrapper** with marker line + `R_HOME_DIR`. |
+| R crashes (SIGABRT) | Check `LD_PRELOAD` | Ensure `unset LD_PRELOAD` in `shellHook`; don’t preload `jemalloc`. |
+| Python `sqlite3` missing | `python -c "import sqlite3"` fails | Ensure `sqlite` in `buildInputs`. |
+| Flake “absolute path forbidden” | Impurity leak | Use `git+file://` flake input, commit changes, then go pure. |
+| Persistent bad state | Confused server | `pkill -f .positron-server`, reconnect, select `R-positron`. |
+| ODBC driver not found (`msodbcsql18`) | `odbcinst -q -d` | Ensure `export ODBCSYSINI=$(pwd)/.odbc` in both `shellHook` **and** `R-positron`. Include `unixODBCDrivers.msodbcsql18` and, if needed, `autoPatchelfHook`. |
+
+```{=html}
+</details>
+```
+
+```{=html}
+<details>
+<summary><strong>Appendix: One-liner health check</strong></summary>
+```
+
+Create `./scripts/health.sh`:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+echo "[1/4] direnv + flake"
+direnv reload >/dev/null 2>&1 || true
+nix flake check
+
+echo "[2/4] R in dev shell"
+nix develop --impure . -c R -q -e 'cat("R OK: ", R.version.string, "\n"); q()'
+
+echo "[3/4] Python sqlite"
+nix develop --impure . -c python -c "import sqlite3; print('sqlite3 OK')"
+
+echo "[4/4] Wrapper"
+~/bin/R-positron -q -e 'cat("wrapper OK\n"); q()'
+echo "✅ All good"
+```
+
+```{=html}
+</details>
+```
