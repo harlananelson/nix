@@ -28,26 +28,24 @@ execute:
 
 This guide makes Positron reliably use a **Nix‑supplied R** for its Console, avoiding common pitfalls:
 
-- PATH confusion or “unusable” R validation in Positron
-- `jemalloc`/`SIGABRT` crashes
-- `.Rprofile` or `.RData` side‑effects
-- Remote‑SSH path/scope problems
+-   PATH confusion or “unusable” R validation in Positron
+-   `jemalloc`/`SIGABRT` crashes
+-   `.Rprofile` or `.RData` side‑effects
+-   Remote‑SSH path/scope problems
 
 You get:
 
-- A Nix dev shell providing R, Python, ODBC deps, etc.
-- Minimal `.envrc` for direnv activation.
-- A dedicated **`R-positron` wrapper** that Positron accepts and prefers.
-- Remote-SSH–safe configuration (interpreter pinned explicitly).
-- A verification checklist to confirm each layer works.
+-   A Nix dev shell providing R, Python, ODBC deps, etc.
+-   Minimal `.envrc` for direnv activation.
+-   A dedicated **`R-positron` wrapper** that Positron accepts and prefers.
+-   Remote-SSH–safe configuration (interpreter pinned explicitly).
+-   A verification checklist to confirm each layer works.
 
-```{=html}
 </details>
-```
 
 ## Directory layout (example)
 
-```
+```         
 /app/projects/clinressys01_t1/
 ├─ clinresearchr/                  # your local R package (ideally a git repo)
 └─ qinglan/                        # the project using that package
@@ -66,12 +64,12 @@ You get:
 <summary><strong>2) flake.nix (production‑safe)</strong></summary>
 ```
 
-- Keeps Nix’s `rWrapper` intact (no post‑patching).
-- Adds `sqlite` (so Python’s stdlib `sqlite3` works).
-- Avoids `jemalloc` preload to prevent R `SIGABRT` in IDE‑spawned sessions.
-- Pin stable channel by default; you **may** swap to `nixos‑unstable` for newer R pkgs.
+-   Keeps Nix’s `rWrapper` intact (no post‑patching).
+-   Adds `sqlite` (so Python’s stdlib `sqlite3` works).
+-   Avoids `jemalloc` preload to prevent R `SIGABRT` in IDE‑spawned sessions.
+-   Pin stable channel by default; you **may** swap to `nixos‑unstable` for newer R pkgs.
 
-```{.nix}
+``` nix
 {
   description = "Qinglan analysis project with clinresearch tools";
 
@@ -141,9 +139,7 @@ You get:
 }
 ```
 
-```{=html}
 </details>
-```
 
 ```{=html}
 <details open>
@@ -151,22 +147,22 @@ You get:
 ```
 
 **Impure (fastest to get going):**
-```
+
+```         
 use flake --impure
 ```
 
 **Pure (once your local package is a committed git flake):**
-```
+
+```         
 use flake .
 ```
 
-> After creating/updating this file, run `direnv allow` in the project root.  
-> If your system needs experimental features:  
+> After creating/updating this file, run `direnv allow` in the project root.\
+> If your system needs experimental features:\
 > `nix develop --extra-experimental-features 'nix-command flakes'`
 
-```{=html}
 </details>
-```
 
 ```{=html}
 <details open>
@@ -175,7 +171,7 @@ use flake .
 
 Positron validates R executables. Provide a tiny shell script with the expected marker and a stable environment, then delegate to Nix. Use `--vanilla` to ignore `~/.Rprofile` and `.RData`. Parameterize `PROJECT_DIR` for multi‑project use.
 
-```bash
+``` bash
 #!/usr/bin/env bash
 set -euo pipefail
 # Shell wrapper for R executable.
@@ -189,15 +185,14 @@ exec "$NIX" develop --impure "$PROJECT_DIR" --command R --vanilla "$@"
 ```
 
 Make it executable:
-```bash
+
+``` bash
 chmod +x ~/bin/R-positron
 ```
 
 **Pure‑mode switch later:** drop `--impure` once you convert your local dependency to a fully pure flake (see §8).
 
-```{=html}
 </details>
-```
 
 ```{=html}
 <details open>
@@ -207,7 +202,8 @@ chmod +x ~/bin/R-positron
 Create or edit:
 
 **`/app/projects/clinressys01_t1/qinglan/.vscode/settings.json`**
-```json
+
+``` json
 {
   "positron.r.interpreters.default": "/home/clinressys01_t1/bin/R-positron",
   "positron.r.interpreters.startupBehavior": "manual"
@@ -216,32 +212,31 @@ Create or edit:
 
 > Manual startup lets you explicitly start the correct interpreter from the picker and avoids auto‑starting a wrong system R.
 
-```{=html}
 </details>
-```
 
 ```{=html}
 <details open>
 <summary><strong>6) Remote‑SSH hygiene</strong></summary>
 ```
 
-- Always edit **remote** settings (you’ll see “Remote” in the settings title).
-- If Positron gets confused, **reset the server** on the remote:
-  ```bash
-  pkill -f .positron-server || true
-  ```
-- Reconnect the Remote‑SSH window and select **R‑positron** in the Interpreter picker.
+-   Always edit **remote** settings (you’ll see “Remote” in the settings title).
 
-```{=html}
+-   If Positron gets confused, **reset the server** on the remote:
+
+    ``` bash
+    pkill -f .positron-server || true
+    ```
+
+-   Reconnect the Remote‑SSH window and select **R‑positron** in the Interpreter picker.
+
 </details>
-```
 
 ```{=html}
 <details open>
 <summary><strong>7) Verification checklist (run on the remote)</strong></summary>
 ```
 
-```bash
+``` bash
 # Project dir ready; direnv active
 cd /app/projects/clinressys01_t1/qinglan
 direnv reload && nix flake check
@@ -258,7 +253,8 @@ nix develop --impure . -c python -c "import sqlite3, sys; print('sqlite3 OK', sy
 ```
 
 In the Positron Console (after selecting **R‑positron**):
-```r
+
+``` r
 cat(R.version.string, "\n")
 Sys.getenv("R_HOME")
 capabilities()
@@ -266,37 +262,41 @@ capabilities()
 
 You should see your Nix R version, a sensible `R_HOME`, and no crashes.
 
-```{=html}
 </details>
-```
 
 ```{=html}
 <details open>
 <summary><strong>8) Going pure (drop <code>--impure</code> cleanly)</strong></summary>
 ```
 
-1. Ensure `clinresearchr/` is a **git repo with commits**.
-2. Keep the flake input as:
-   ```nix
-   inputs.clinresearchr.url = "git+file:///app/projects/clinressys01_t1/clinresearchr";
-   ```
-3. Update inputs:
-   ```bash
-   cd /app/projects/clinressys01_t1/qinglan
-   nix flake update
-   ```
-4. Switch:
-   - `.envrc` → `use flake .`
-   - `R-positron` → drop `--impure`:
-     ```bash
-     exec "$NIX" develop "$PROJECT_DIR" --command R --vanilla "$@"
-     ```
+1.  Ensure `clinresearchr/` is a **git repo with commits**.
+
+2.  Keep the flake input as:
+
+    ``` nix
+    inputs.clinresearchr.url = "git+file:///app/projects/clinressys01_t1/clinresearchr";
+    ```
+
+3.  Update inputs:
+
+    ``` bash
+    cd /app/projects/clinressys01_t1/qinglan
+    nix flake update
+    ```
+
+4.  Switch:
+
+    -   `.envrc` → `use flake .`
+
+    -   `R-positron` → drop `--impure`:
+
+        ``` bash
+        exec "$NIX" develop "$PROJECT_DIR" --command R --vanilla "$@"
+        ```
 
 Now your build is reproducible without impurity.
 
-```{=html}
 </details>
-```
 
 ```{=html}
 <details open>
@@ -304,7 +304,7 @@ Now your build is reproducible without impurity.
 ```
 
 | Symptom | Quick probe | Fix |
-|---|---|---|
+|------------------------|------------------------|------------------------|
 | Positron lists wrong/empty R | Settings scope wrong? | Edit **remote** settings; pin `R-positron`; `startupBehavior=manual`. |
 | R “unusable” in Positron | Using raw `/nix/store/.../R`? | Use **wrapper** with marker line + `R_HOME_DIR`. |
 | R crashes (SIGABRT) | Check `LD_PRELOAD` | Ensure `unset LD_PRELOAD` in `shellHook`; don’t preload `jemalloc`. |
@@ -313,9 +313,7 @@ Now your build is reproducible without impurity.
 | Persistent bad state | Confused server | `pkill -f .positron-server`, reconnect, select `R-positron`. |
 | ODBC driver not found (`msodbcsql18`) | `odbcinst -q -d` | Ensure `export ODBCSYSINI=$(pwd)/.odbc` in both `shellHook` **and** `R-positron`. Include `unixODBCDrivers.msodbcsql18` and, if needed, `autoPatchelfHook`. |
 
-```{=html}
 </details>
-```
 
 ```{=html}
 <details>
@@ -324,7 +322,7 @@ Now your build is reproducible without impurity.
 
 Create `./scripts/health.sh`:
 
-```bash
+``` bash
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -344,6 +342,4 @@ echo "[4/4] Wrapper"
 echo "✅ All good"
 ```
 
-```{=html}
 </details>
-```
