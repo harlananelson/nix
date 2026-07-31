@@ -59,7 +59,7 @@ This project implements a secure, MFA-authenticated data extraction and analysis
 
 - Nix package manager (for reproducible environment)
 - Azure CLI (for MFA authentication)
-- Access to IU Health EDW database
+- Access to the EDW database
 - Python 3.9+ with virtual environment
 - R 4.0+ with required packages
 
@@ -262,7 +262,7 @@ Clinical Research Data Pipeline
 
 ## License
 
-This project contains protected health information (PHI) and is not for public distribution. Access is restricted to authorized IU Health research personnel.
+This project contains protected health information (PHI) and is not for public distribution. Access is restricted to authorized research personnel.
 
 ## Contact
 
