@@ -283,3 +283,40 @@ TriggeredBy: ● nix-daemon.socket
              └─24958 nix-daemon --daemon
 clinressys01_t1@iuhlwolfap1122:~/projects/nix$ cd ~/projects/edw && nix develop
 error: cannot open connection to remote store 'unix://': error: reading from file: Connection reset by peer
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo journalctl -u nix-daemon -n 30 --no-pager
+[sudo] password for clinressys01_t1: 
+Jul 01 17:07:51 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2278204, user 491601552
+Jul 02 14:57:20 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2290006, user 491601552
+Jul 07 15:09:55 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2316991, user 491601552
+Jul 08 08:41:55 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2346608, user 491601552
+Jul 08 09:04:59 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2349698, user 491601552
+Jul 09 10:26:05 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2383268, user 491601552
+Jul 09 10:26:55 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2383568, user 491601552
+Jul 09 10:40:49 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2384321, user 491601552
+Jul 09 11:20:45 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2385294, user 491601552
+Jul 09 11:20:53 iuhlwolfap1122.chp.clarian.org nix-daemon[2385304]: unexpected Nix daemon error: error: writing to file: Broken pipe
+Jul 09 11:36:46 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2385772, user 491601552
+Jul 09 13:54:23 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2388826, user 491601552
+Jul 09 14:49:31 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2392237, user 491601552
+Jul 09 15:14:31 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2394926, user 491601552
+Jul 14 09:31:16 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2425238, user 491601552
+Jul 16 08:51:41 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2449021, user 491601552
+Jul 16 08:53:28 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2449630, user 491601552
+Jul 16 14:48:26 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2453683, user 491601552
+Jul 17 08:17:56 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2468133, user 491601552
+Jul 17 08:24:38 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2468777, user 491601552
+Jul 17 10:40:47 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2473395, user 491601552
+Jul 17 11:52:13 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2474483, user 491601552
+Jul 17 16:55:44 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2503200, user 491601552
+Jul 17 17:01:21 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2503510, user 491601552
+Jul 28 15:59:17 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2562952, user 491601552
+Jul 29 10:09:03 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2570201, user 491601552
+Jul 29 10:38:00 iuhlwolfap1122.chp.clarian.org nix-daemon[1483046]: accepted connection from pid 2572073, user 491601552
+-- Boot 3cf57c11b1664e998671ddb3ddbe90f2 --
+Jul 31 12:07:36 iuhlwolfap1122.chp.clarian.org systemd[1]: Started nix-daemon.service - Nix Daemon.
+Jul 31 12:16:28 iuhlwolfap1122.chp.clarian.org nix-daemon[24958]: accepted connection from pid 26248, user 491601552
+Jul 31 12:16:28 iuhlwolfap1122.chp.clarian.org nix-daemon[26273]: unexpected Nix daemon error: error: the path '"/nix"' is a symlink; this is not allowed for the Nix store and its parent directories
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
