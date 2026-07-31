@@ -42,3 +42,18 @@ reboot   system boot  6.8.0-136-generi Wed Jul 29 18:15   still running
 reboot   system boot  6.8.0-71-generic Tue Aug 19 11:00   still running
 reboot   system boot  6.8.0-71-generic Tue Aug 19 10:57 - 10:59  (00:02)
 clinressys01_t1@iuhlwolfap1122:~/projects/edw$ 
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ ls -la ~/.nix-profile  ~/.nix-defexpr/ ~/.nix-channels 2>/dev/null
+lrwxrwxrwx 1 clinressys01_t1 domain users 55 Aug 21  2025 /home/clinressys01_t1/.nix-profile -> /home/clinressys01_t1/.local/state/nix/profiles/profile
+
+/home/clinressys01_t1/.nix-defexpr/:
+total 4
+drwxr-xr-x  2 clinressys01_t1 domain users   43 Aug 26  2025 .
+drwxr-xr-x 35 clinressys01_t1 domain users 4096 Jul 31 11:44 ..
+lrwxrwxrwx  1 clinressys01_t1 domain users   56 Aug 26  2025 channels -> /home/clinressys01_t1/.local/state/nix/profiles/channels
+lrwxrwxrwx  1 clinressys01_t1 domain users   44 Aug 26  2025 channels_root -> /nix/var/nix/profiles/per-user/root/channels
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ grep -n nix ~/.bashrc ~/.profile 2>/dev/null
+/home/clinressys01_t1/.bashrc:118:alias nixbox="nix develop ~/nix-config"
+/home/clinressys01_t1/.bashrc:120:#source $HOME/.nix-profile/share/nix-direnv/direnvrc
