@@ -1,0 +1,44 @@
+clinressys01_t1@iuhlwolfap1122:~/projects$ cd edw
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ nix develop
+Command 'nix' not found, but can be installed with:
+apt install nix-bin
+Please ask your administrator.
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ ls /nix/
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ ls /nix/
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ findmnt /nix
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ lsblk -f
+NAME             FSTYPE      FSVER            LABEL                           UUID                                   FSAVAIL FSUSE% MOUNTPOINTS
+sda                                                                                                                                 
+├─sda1           vfat        FAT32                                            A0B4-BF0B                                   1G     1% /boot/efi
+└─sda2           LVM2_member LVM2 001                                         5ozZwd-BOVM-JSe8-kCeO-fIVA-QgW6-QmNlh4                
+  ├─vg--os-lv--root
+  │              xfs                                                          9ee64ee7-dc08-4bad-894d-91d1c56be4c1     40.7G    19% /
+  └─vg--os-lv--home
+                 xfs                                                          7e91685d-1fd9-4ede-bcb6-86a90541415d    419.3G     9% /home
+sdb                                                                                                                                 
+└─sdb1           LVM2_member LVM2 001                                         QOqx23-if7w-rax7-Yu85-Ufgt-1KjG-TpvrPv                
+  └─appvg-applv  xfs                                                          03d70c83-61ea-49c3-bccb-b06b88b07d24    376.1G    27% /app
+sr0              iso9660     Joliet Extension Ubuntu-Server 24.04.2 LTS amd64 2025-02-16-22-49-22-00                                
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ cat /etc/fstab | grep -i nix
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ systemctl list-units --failed
+  UNIT                                 LOAD   ACTIVE SUB    DESCRIPTION                              
+● sssd-pac.service                     loaded failed failed SSSD PAC Service responder
+● systemd-networkd-wait-online.service loaded failed failed Wait for Network to be Configured        
+● sssd-autofs.socket                   loaded failed failed SSSD AutoFS Service responder socket
+● sssd-nss.socket                      loaded failed failed SSSD NSS Service responder socket
+● sssd-pac.socket                      loaded failed failed SSSD PAC Service responder socket
+● sssd-pam-priv.socket                 loaded failed failed SSSD PAM Service responder private socket
+● sssd-pam.socket                      loaded failed failed SSSD PAM Service responder socket
+● sssd-ssh.socket                      loaded failed failed SSSD SSH Service responder socket
+● sssd-sudo.socket                     loaded failed failed SSSD Sudo Service responder socket
+
+Legend: LOAD   → Reflects whether the unit definition was properly loaded.
+        ACTIVE → The high-level unit activation state, i.e. generalization of SUB.
+        SUB    → The low-level unit activation state, values depend on unit type.
+
+9 loaded units listed.
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ last reboot | head -3
+reboot   system boot  6.8.0-136-generi Wed Jul 29 18:15   still running
+reboot   system boot  6.8.0-71-generic Tue Aug 19 11:00   still running
+reboot   system boot  6.8.0-71-generic Tue Aug 19 10:57 - 10:59  (00:02)
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ 
