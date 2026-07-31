@@ -320,3 +320,23 @@ Jul 31 12:07:36 iuhlwolfap1122.chp.clarian.org systemd[1]: Started nix-daemon.se
 Jul 31 12:16:28 iuhlwolfap1122.chp.clarian.org nix-daemon[24958]: accepted connection from pid 26248, user 491601552
 Jul 31 12:16:28 iuhlwolfap1122.chp.clarian.org nix-daemon[26273]: unexpected Nix daemon error: error: the path '"/nix"' is a symlink; this is not allowed for the Nix store and its parent directories
 clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
+
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo rm  /nix
+bash: /app/nix/store/bdf516vl81c2zcgizlv7hpig5yqfm0bz-direnv-2.37.1/bin/direnv: cannot execute: required file not found
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo mkdir /nix
+bash: /app/nix/store/bdf516vl81c2zcgizlv7hpig5yqfm0bz-direnv-2.37.1/bin/direnv: cannot execute: required file not found
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo mount --bind /app/nix /nix
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ echo '/app/nix /nix none bind 0 0' 
+/app/nix /nix none bind 0 0
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ echo '/app/nix /nix none bind 0 0' | sudo tee -a /etc/fstab
+/app/nix /nix none bind 0 0
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo systemctl restart nix-daemon.socket nix-daemon.service
+Job failed. See "journalctl -xe" for details.
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ journalctl -xe
+Hint: You are currently not seeing messages from other users and the system.
+      Users in groups 'adm', 'systemd-journal' can see all messages.
+      Pass -q to turn off this notice.
+No journal files were opened due to insufficient permissions.
