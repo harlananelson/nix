@@ -409,3 +409,17 @@ edw devshell ready. On the jump box: bash start-day.sh
   (az login -> EDW SELECT 1 -> visible Cerner schemas -> then Phase 1 in TODO.md)
   R + quarto 1.8.26 + jupyter kernel 'ir-edw' available
 (.venv) I have no name!@iuhlwolfap1122:~/projects/edw$ 
+
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ cat >> ~/.bash_profile <<'EOF'
+> [ -f ~/.profile ] && . ~/.profile
+> [ -f ~.bashrc ] && . ~/.bashrc
+> EOF
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ vi ~/.profile
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ type nix
+nix is /nix/var/nix/profiles/default/bin/nix
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ alias nixbox
+alias nixbox='nix develop ~/nix-config'
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
