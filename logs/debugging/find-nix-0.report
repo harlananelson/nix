@@ -340,3 +340,47 @@ Hint: You are currently not seeing messages from other users and the system.
       Users in groups 'adm', 'systemd-journal' can see all messages.
       Pass -q to turn off this notice.
 No journal files were opened due to insufficient permissions.
+
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo systemctl daemon-reload
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo systemctl restart ni-daemon.socket
+Failed to restart ni-daemon.socket: Unit ni-daemon.socket not found.
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo systemctl restart nix-daemon.socket
+Job failed. See "journalctl -xe" for details.
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo journalctl -xe
+░░ 
+░░ The job identifier is 45487.
+Jul 31 12:26:00 iuhlwolfap1122.chp.clarian.org systemd[1]: fwupd-refresh.service: Deactivated successfully.
+░░ Subject: Unit succeeded
+░░ Defined-By: systemd
+░░ Support: http://www.ubuntu.com/support
+░░ 
+░░ The unit fwupd-refresh.service has successfully entered the 'dead' state.
+Jul 31 12:26:00 iuhlwolfap1122.chp.clarian.org systemd[1]: Finished fwupd-refresh.service - Refresh fwupd metadata and update motd.
+░░ Subject: A start job for unit fwupd-refresh.service has finished successfully
+░░ Defined-By: systemd
+░░ Support: http://www.ubuntu.com/support
+░░ 
+░░ A start job for unit fwupd-refresh.service has finished successfully.
+░░ 
+░░ The job identifier is 45363.
+Jul 31 12:26:20 iuhlwolfap1122.chp.clarian.org sudo[28149]: clinressys01_t1 : TTY=pts/3 ; PWD=/app/projects/clinressys01_t1/nix ; USER=r>
+Jul 31 12:26:20 iuhlwolfap1122.chp.clarian.org sudo[28149]: pam_unix(sudo:session): session opened for user root(uid=0) by clinressys01_>
+Jul 31 12:26:20 iuhlwolfap1122.chp.clarian.org sudo[28149]: pam_unix(sudo:session): session closed for user root
+Jul 31 12:26:28 iuhlwolfap1122.chp.clarian.org sudo[28200]: clinressys01_t1 : TTY=pts/3 ; PWD=/app/projects/clinressys01_t1/nix ; USER=r>
+Jul 31 12:26:28 iuhlwolfap1122.chp.clarian.org sudo[28200]: pam_unix(sudo:session): session opened for user root(uid=0) by clinressys01_>
+Jul 31 12:26:28 iuhlwolfap1122.chp.clarian.org systemd[1]: nix-daemon.socket: Socket service nix-daemon.service already active, refusing.
+Jul 31 12:26:28 iuhlwolfap1122.chp.clarian.org systemd[1]: Failed to listen on nix-daemon.socket - Nix Daemon Socket.
+░░ Subject: A start job for unit nix-daemon.socket has failed
+░░ Defined-By: systemd
+░░ Support: http://www.ubuntu.com/support
+░░ 
+░░ A start job for unit nix-daemon.socket has finished with a failure.
+░░ 
+░░ The job identifier is 45611 and the job result is failed.
+Jul 31 12:26:28 iuhlwolfap1122.chp.clarian.org sudo[28200]: pam_unix(sudo:session): session closed for user root
+Jul 31 12:26:45 iuhlwolfap1122.chp.clarian.org sudo[28251]: clinressys01_t1 : TTY=pts/3 ; PWD=/app/projects/clinressys01_t1/nix ; USER=r>
+Jul 31 12:26:45 iuhlwolfap1122.chp.clarian.org sudo[28251]: pam_unix(sudo:session): session opened for user root(uid=0) by clinressys01_>
+lines 3445-3477/3477 (END)
