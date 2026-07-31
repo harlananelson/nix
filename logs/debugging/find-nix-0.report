@@ -198,3 +198,26 @@ alias nixbox="nix develop ~/nix-config"
 
 #source $HOME/.nix-profile/share/nix-direnv/direnvrc
 eval "$(direnv hook bash)"
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ ls /app/nix
+store  var
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo rmdir /nix
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo ln -s /app/nix /nix
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ ls -la ~/.nix-profile/bin/ | head
+total 0
+dr-xr-xr-x 2 root root 45 Dec 31  1969 .
+dr-xr-xr-x 4 root root 51 Dec 31  1969 ..
+lrwxrwxrwx 1 root root 68 Dec 31  1969 direnv -> /nix/store/bdf516vl81c2zcgizlv7hpig5yqfm0bz-direnv-2.37.1/bin/direnv
+lrwxrwxrwx 1 root root 60 Dec 31  1969 gh -> /nix/store/sgwlyr2d03y1jgzh2iph82yrg8wwvn2f-gh-2.88.1/bin/gh
+lrwxrwxrwx 1 root root 69 Dec 31  1969 git-lfs -> /nix/store/c4zw82jcdb6xxs09gma1kzlkb7kl2ikp-git-lfs-3.6.1/bin/git-lfs
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ source ~/.nix-profile/
+bin/           manifest.json  share/         
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ ls ~/.nix-profile
+bin  manifest.json  share
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ nix version
+Command 'nix' not found, but can be installed with:
+apt install nix-bin
+Please ask your administrator.
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
