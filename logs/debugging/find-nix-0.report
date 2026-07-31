@@ -384,3 +384,28 @@ Jul 31 12:26:28 iuhlwolfap1122.chp.clarian.org sudo[28200]: pam_unix(sudo:sessio
 Jul 31 12:26:45 iuhlwolfap1122.chp.clarian.org sudo[28251]: clinressys01_t1 : TTY=pts/3 ; PWD=/app/projects/clinressys01_t1/nix ; USER=r>
 Jul 31 12:26:45 iuhlwolfap1122.chp.clarian.org sudo[28251]: pam_unix(sudo:session): session opened for user root(uid=0) by clinressys01_>
 lines 3445-3477/3477 (END)
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo systemctl restart nix-daemon.service
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ systemctl status nix-daemon.service | head -5
+● nix-daemon.service - Nix Daemon
+     Loaded: loaded (/etc/systemd/system/nix-daemon.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-07-31 12:28:42 EDT; 22s ago
+TriggeredBy: ○ nix-daemon.socket
+       Docs: man:nix-daemon
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
+
+
+# From the EDW directory
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/edw$ nix develop
+evaluation warning: 'unixODBCDrivers' has been renamed to 'unixodbcDrivers'
+evaluation warning: 'unixODBCDrivers' has been renamed to 'unixodbcDrivers'
+evaluation warning: 'unixODBC' has been renamed to 'unixodbc'
+
+edw devshell ready. On the jump box: bash start-day.sh
+  (az login -> EDW SELECT 1 -> visible Cerner schemas -> then Phase 1 in TODO.md)
+  R + quarto 1.8.26 + jupyter kernel 'ir-edw' available
+(.venv) I have no name!@iuhlwolfap1122:~/projects/edw$ 
