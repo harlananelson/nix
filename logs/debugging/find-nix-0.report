@@ -423,3 +423,11 @@ nix is /nix/var/nix/profiles/default/bin/nix
 clinressys01_t1@iuhlwolfap1122:~/projects/nix$ alias nixbox
 alias nixbox='nix develop ~/nix-config'
 clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ vi ~/.bash_profile 
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ cat ~/.bash_profile 
+sysinfo
+[ -f ~/.profile ] && . ~/.profile
+[ -f ~/.bashrc ] && . ~/.bashrc
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
