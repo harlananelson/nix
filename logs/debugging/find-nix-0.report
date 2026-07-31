@@ -221,3 +221,43 @@ Command 'nix' not found, but can be installed with:
 apt install nix-bin
 Please ask your administrator.
 clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ ls /nix/var/nix/profiles/default/bin
+nix        nix-channel          nix-copy-closure  nix-env   nix-instantiate   nix-shell
+nix-build  nix-collect-garbage  nix-daemon        nix-hash  nix-prefetch-url  nix-store
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ export PATH=/nix/var/nix/profiles/default/bin:$PATH
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo ln -sf /nix/var/nix/profiles/default/lib/systemd/system/nix-daemon.service /etc/systemd/system
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo ln -sf /nix/var/nix/profiles/default/lib/systemd/system/nix-daemon.socket /etc/systemd/system
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo systemctl daemon-reload
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo systemctl enable --now nix-daemon.socket nix-daemon.service
+Created symlink /etc/systemd/system/multi-user.target.wants/nix-daemon.service → /app/nix/store/ps7946ckblckgay23hljq2pyd9p4ixbi-nix-2.31.0/lib/systemd/system/nix-daemon.service.
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ getent group nixbld && getent passwd nixbld1
+nixbld:x:30000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30,nixbld31,nixbld32
+nixbld1:x:30001:30000:Nix build user 1:/var/empty:/sbin/nologin
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo mkdir -p /etc/nix
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ echo 'experimental-features = nix-command flakes' | sudo tee /etc/nix/nix.conf
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ ls /nix/var/nix/profiles/default/bin
+nix        nix-channel          nix-copy-closure  nix-env   nix-instantiate   nix-shell
+nix-build  nix-collect-garbage  nix-daemon        nix-hash  nix-prefetch-url  nix-store
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ export PATH=/nix/var/nix/profiles/default/bin:$PATH
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo ln -sf /nix/var/nix/profiles/default/lib/systemd/system/nix-daemon.service /etc/systemd/system
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo ln -sf /nix/var/nix/profiles/default/lib/systemd/system/nix-daemon.socket /etc/systemd/system
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo systemctl daemon-reload
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo systemctl enable --now nix-daemon.socket nix-daemon.service
+Created symlink /etc/systemd/system/multi-user.target.wants/nix-daemon.service → /app/nix/store/ps7946ckblckgay23hljq2pyd9p4ixbi-nix-2.31.0/lib/systemd/system/nix-daemon.service.
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ getent group nixbld && getent passwd nixbld1
+nixbld:x:30000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30,nixbld31,nixbld32
+nixbld1:x:30001:30000:Nix build user 1:/var/empty:/sbin/nologin
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ sudo mkdir -p /etc/nix
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ echo 'experimental-features = nix-command flakes' | sudo tee /etc/nix/nix.conf
+experimental-features = nix-command flakes
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ echo 'build-users-group = nixbld' | sudo tee -a /etc/nix/nix.conf
+build-users-group = nixbld
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ echo 'export PATH=/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH'
+export PATH=/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
