@@ -261,3 +261,25 @@ build-users-group = nixbld
 clinressys01_t1@iuhlwolfap1122:~/projects/nix$ echo 'export PATH=/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH'
 export PATH=/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH
 clinressys01_t1@iuhlwolfap1122:~/projects/nix$ 
+
+
+
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ echo 'export PATH=/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH' | sudo tee /etc/profile.d/nix.sh
+export PATH=/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ nix --version
+nix (Nix) 2.31.0
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ systemctl status nix-daemon
+● nix-daemon.service - Nix Daemon
+     Loaded: loaded (/etc/systemd/system/nix-daemon.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-07-31 12:07:36 EDT; 8min ago
+TriggeredBy: ● nix-daemon.socket
+       Docs: man:nix-daemon
+             https://nixos.org/manual
+   Main PID: 24958 (nix-daemon)
+      Tasks: 9 (limit: 1048576)
+     Memory: 41.5M (peak: 42.2M)
+        CPU: 95ms
+     CGroup: /system.slice/nix-daemon.service
+             └─24958 nix-daemon --daemon
+clinressys01_t1@iuhlwolfap1122:~/projects/nix$ cd ~/projects/edw && nix develop
+error: cannot open connection to remote store 'unix://': error: reading from file: Connection reset by peer
